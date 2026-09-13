@@ -11,6 +11,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { startGrowing, earnLeaf, setChallengeTarget, submitCheckIn, toggleCheer } from "@/api/challenges";
 import { completeMilestone, computeJourneyProgressPct, listMilestones } from "@/api/lifeChallenge";
 import { getChallengeProgress } from "@/api/progress";
+import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
 import {
   checkInLabel,
   isAccumulative,
@@ -120,7 +121,7 @@ export default function ChallengeDetailScreen() {
     setBusy(false);
     if (error) showAlert("บันทึกความสำเร็จไม่สำเร็จ", error);
     else {
-      showAlert("🍃 ได้ใบไม้ใหม่ 1 ใบ!", "ต้นไม้ของคุณเขียวขึ้นอีกนิด — ไปดูได้ที่แท็บ Me");
+      showAlert("🎉 เติมตาครบสองข้างแล้ว!", "ต้นไม้ของคุณได้ใบไม้เพิ่ม 1 ใบ — ไปดูได้ที่แท็บ Me");
       if (challenge) await generateAndShareCard(challenge, "COMPLETE");
       load();
     }
@@ -258,8 +259,14 @@ export default function ChallengeDetailScreen() {
   }
 
   const isOwner = session?.user?.id === challenge.owner_id;
-  // 🍃 = ได้ใบไม้แล้ว (สำเร็จ) · 🌱 = เริ่มปลูกแล้ว กำลังพยายาม · 🌰 = ยังไม่เริ่ม
-  const treeEmoji = growth.right_eye_filled_at ? "🍃" : growth.left_eye_filled_at ? "🌱" : "🌰";
+  // ดารุมะประจำ Challenge นี้ — หนึ่งตัวต่อหนึ่งเป้าหมาย (ดู DarumaCanvas)
+  const darumaEyes = darumaEyesFrom(growth.left_eye_filled_at, growth.right_eye_filled_at);
+  const darumaCaption =
+    darumaEyes === 2
+      ? "ตาครบสองข้างแล้ว — คุณทำได้จริง"
+      : darumaEyes === 1
+        ? "ดารุมะรอตาข้างที่สองจากคุณอยู่"
+        : "ดารุมะยังไม่มีตาเลย — รอคำมั่นจากคุณ";
   const journeyPct = challenge.type === "LIFE" ? computeJourneyProgressPct(milestones) : null;
 
   // ───────── เงื่อนไข "ทำสำเร็จ" ที่ใช้ปลดล็อกปุ่มรับใบไม้ ─────────
@@ -280,9 +287,11 @@ export default function ChallengeDetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.treeStatus}>
-        {treeEmoji} {challenge.status}
-      </Text>
+      <View style={styles.darumaBox}>
+        <DarumaCanvas eyes={darumaEyes} width={140} />
+        <Text style={styles.darumaCaption}>{darumaCaption}</Text>
+      </View>
+
       <Text style={styles.title}>{challenge.title}</Text>
       <Text style={styles.goal}>{challenge.goal_description}</Text>
       {challenge.reward_text ? <Text style={styles.reward}>🎁 {challenge.reward_text}</Text> : null}
@@ -395,11 +404,11 @@ export default function ChallengeDetailScreen() {
       {!growth.left_eye_filled_at && (
         <View style={styles.ritualBox}>
           <Text style={styles.ritualText}>
-            เมื่อพร้อมจะเริ่มจริง ๆ กดปลูกต้นกล้าของ Challenge นี้{"\n"}
-            ทำสำเร็จเมื่อไหร่ จะได้ใบไม้ 1 ใบไปติดบนต้นไม้ของคุณ 🍃
+            เมื่อพร้อมจะเริ่มจริง ๆ เติมตาข้างแรกให้ดารุมะ{"\n"}
+            ทำสำเร็จเมื่อไหร่ค่อยเติมตาข้างที่สอง แล้วต้นไม้ของคุณจะได้ใบไม้เพิ่ม 1 ใบ 🍃
           </Text>
-          <Pressable style={styles.growButton} onPress={handleStartGrowing} disabled={busy}>
-            <Text style={styles.primaryButtonText}>🌱 เริ่มปลูก</Text>
+          <Pressable style={styles.ritualButton} onPress={handleStartGrowing} disabled={busy}>
+            <Text style={styles.primaryButtonText}>👁️ เติมตาข้างแรก</Text>
           </Pressable>
         </View>
       )}
@@ -448,7 +457,7 @@ export default function ChallengeDetailScreen() {
                 {unit ? ` ${unit}` : " ครั้ง"} แล้ว — ใบไม้ใบนี้เป็นของคุณ
               </Text>
               <Pressable style={styles.leafButton} onPress={handleEarnLeaf} disabled={busy}>
-                <Text style={styles.leafButtonText}>🍃 ทำสำเร็จแล้ว — รับใบไม้ 1 ใบ</Text>
+                <Text style={styles.leafButtonText}>👁️ เติมตาข้างที่สอง — รับใบไม้ 1 ใบ</Text>
               </Pressable>
             </View>
           ) : target !== null ? (
@@ -495,7 +504,7 @@ export default function ChallengeDetailScreen() {
             <View style={styles.unlockedBox}>
               <Text style={styles.unlockedText}>🎉 ทำ Milestone ครบทุกข้อแล้ว!</Text>
               <Pressable style={styles.leafButton} onPress={handleEarnLeaf} disabled={busy}>
-                <Text style={styles.leafButtonText}>🍃 ทำสำเร็จแล้ว — รับใบไม้ 1 ใบ</Text>
+                <Text style={styles.leafButtonText}>👁️ เติมตาข้างที่สอง — รับใบไม้ 1 ใบ</Text>
               </Pressable>
             </View>
           ) : (
@@ -511,9 +520,9 @@ export default function ChallengeDetailScreen() {
 
       {growth.right_eye_filled_at && (
         <View style={styles.completedBox}>
-          <Text style={styles.completedEmoji}>🍃</Text>
           <Text style={styles.completedText}>
-            ใบไม้ใบนี้เป็นของคุณแล้ว{"\n"}ครั้งหนึ่งคุณเคยบอกว่าจะทำ และคุณทำสำเร็จ
+            ดารุมะได้ตาครบสองข้างแล้ว และต้นไม้ของคุณได้ใบไม้เพิ่มอีก 1 ใบ 🍃{"\n"}
+            ครั้งหนึ่งคุณเคยบอกว่าจะทำ และคุณทำสำเร็จ
           </Text>
         </View>
       )}
@@ -550,7 +559,8 @@ export default function ChallengeDetailScreen() {
 const styles = StyleSheet.create({
   container: { padding: 20, gap: 8 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  treeStatus: { fontSize: 14, color: "#888" },
+  darumaBox: { alignItems: "center", marginBottom: 8 },
+  darumaCaption: { fontSize: 13, color: "#8a7f76", marginTop: 6, textAlign: "center" },
   title: { fontSize: 24, fontWeight: "700", marginTop: 4 },
   goal: { fontSize: 15, color: "#555", marginTop: 4 },
   reward: { fontSize: 14, color: "#b45309", marginTop: 8 },
@@ -576,7 +586,7 @@ const styles = StyleSheet.create({
   ritualText: { textAlign: "center", color: "#555", lineHeight: 22 },
   // ปุ่มที่เกี่ยวกับการปลูก/ใบไม้ใช้สีเขียว (โต/สำเร็จ) ส่วนสีแดงเดิมยังเป็น
   // สีของการลงมือทำประจำวัน เช่น check-in — แยกความหมายกันชัด ๆ
-  growButton: { backgroundColor: "#2e7d32", borderRadius: 8, padding: 14, alignSelf: "stretch" },
+  ritualButton: { backgroundColor: "#d61f3f", borderRadius: 8, padding: 14, alignSelf: "stretch" },
   leafButton: { borderWidth: 1, borderColor: "#2e7d32", backgroundColor: "#f4f8f1", borderRadius: 8, padding: 12 },
   leafButtonText: { color: "#2e7d32", textAlign: "center", fontWeight: "700" },
   checkInBox: { gap: 8 },
@@ -605,7 +615,6 @@ const styles = StyleSheet.create({
   notYetButton: { flex: 1 },
   secondaryButtonText: { color: "#e11d48", textAlign: "center", fontWeight: "600" },
   completedBox: { marginTop: 24, backgroundColor: "#f4f8f1", borderRadius: 12, padding: 20, alignItems: "center" },
-  completedEmoji: { fontSize: 34, marginBottom: 6 },
   completedText: { textAlign: "center", fontWeight: "600", color: "#2e7d32", lineHeight: 22 },
   linksSection: { marginTop: 32, gap: 10, paddingBottom: 20 },
   linkButton: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },

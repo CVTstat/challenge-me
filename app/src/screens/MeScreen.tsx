@@ -7,20 +7,21 @@ import type { RootStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import TreeCanvas, { nextMilestone } from "@/components/TreeCanvas";
+import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
 import type { DarumaRow, ProfileRow } from "@/types/database";
 
-// ธีมใหม่ตาม feedback ของผู้ใช้: เลิกใช้ "เติมตา Daruma" เปลี่ยนเป็น
-// "ต้นไม้แห่งความสำเร็จ" — เริ่มจากต้นที่มีแต่กิ่ง ทุกความสำเร็จ = ใบไม้ 1 ใบ
-// ที่ไปติดบนต้นจนเขียวชอุ่ม หน้านี้คือ "ต้นไม้ส่วนตัว" ของเจ้าของบัญชี
+// หน้านี้รวมทั้งสองสัญลักษณ์ของแอปไว้ด้วยกัน (ดู DarumaCanvas สำหรับเหตุผล):
+//   • ต้นไม้ด้านบน = ภาพรวมทั้งหมดของเรา ทุกใบคือความสำเร็จ 1 ครั้ง
+//   • ดารุมะในรายการ = เป้าหมายรายอัน เห็นทันทีว่าตัวไหนยังค้างตาข้างที่สองอยู่
 //
 // การอ่านค่าจากฐานข้อมูลเดิม (ไม่ได้เปลี่ยนโครงสร้างตาราง):
-//   • right_eye_filled_at ไม่ null = ทำสำเร็จแล้ว  → ใบไม้ 🍃
-//   • left_eye_filled_at ไม่ null  = เริ่มลงมือแล้ว → กำลังพยายาม 🌱
-//   • ยังไม่มีทั้งคู่                = ยังไม่เริ่ม     → เมล็ด 🌰
+//   • right_eye_filled_at ไม่ null = ตาครบสองข้าง = สำเร็จ → ได้ใบไม้ 🍃
+//   • left_eye_filled_at ไม่ null  = เติมตาแรกแล้ว = กำลังพยายาม
+//   • ยังไม่มีทั้งคู่                = ดารุมะยังไม่มีตาเลย = ยังไม่เริ่ม
 //
 // หมายเหตุ (แก้บั๊กเดิม): Challenge ที่เพิ่งสร้างจะยังเป็นแบบร่าง (DRAFT) —
-// ยังไม่โผล่ในแท็บ Home จนกว่าจะกด "เริ่มปลูก" ที่หน้ารายละเอียดก่อน แถวใน
-// รายการนี้จึงต้องกดเข้าไปได้เสมอ เพื่อไปกดเริ่มปลูกต่อ
+// ยังไม่โผล่ในแท็บ Home จนกว่าจะเติมตาข้างแรกที่หน้ารายละเอียดก่อน แถวใน
+// รายการนี้จึงต้องกดเข้าไปได้เสมอ เพื่อไปเติมตาต่อ
 export default function MeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { session, signOut } = useAuth();
@@ -85,14 +86,14 @@ export default function MeScreen() {
                 ? "ต้นไม้ยังไม่มีใบเลย — ทำ Challenge แรกให้สำเร็จ เพื่อใบแรกของคุณ"
                 : `อีก ${Math.max(0, goal - leaves)} ใบ จะถึงเป้าหมาย ${goal} ใบ`}
             </Text>
-            {seeds > 0 && <Text style={styles.seedLine}>🌰 มี {seeds} อย่างที่ยังไม่ได้เริ่มปลูก</Text>}
+            {seeds > 0 && <Text style={styles.seedLine}>มีดารุมะ {seeds} ตัวที่ยังไม่ได้เติมตาเลย</Text>}
           </View>
 
           <Pressable style={styles.treeLinkButton} onPress={() => navigation.navigate("CommunityTree")}>
             <Text style={styles.treeLinkText}>🌏 ดูต้นไม้ของทั้งชุมชน</Text>
           </Pressable>
 
-          <Text style={styles.listHeader}>รายการทั้งหมดของฉัน</Text>
+          <Text style={styles.listHeader}>ดารุมะของฉัน</Text>
         </View>
       }
       renderItem={({ item }) => (
@@ -100,11 +101,10 @@ export default function MeScreen() {
           style={styles.row}
           onPress={() => navigation.navigate("ChallengeDetail", { challengeId: item.challenge_id })}
         >
-          <Text style={styles.rowEmoji}>
-            {item.right_eye_filled_at ? "🍃" : item.left_eye_filled_at ? "🌱" : "🌰"}
-          </Text>
+          {/* ดารุมะประจำ Challenge แต่ละอัน — เห็นได้ทันทีว่าตัวไหนยังค้างตาอยู่ */}
+          <DarumaCanvas eyes={darumaEyesFrom(item.left_eye_filled_at, item.right_eye_filled_at)} width={34} />
           <Text style={styles.rowTitle}>{item.challenges?.title ?? "-"}</Text>
-          {!item.left_eye_filled_at && <Text style={styles.rowHint}>แตะเพื่อเริ่มปลูก →</Text>}
+          {!item.left_eye_filled_at && <Text style={styles.rowHint}>แตะเพื่อเติมตาแรก →</Text>}
         </Pressable>
       )}
       ListEmptyComponent={
@@ -158,7 +158,6 @@ const styles = StyleSheet.create({
   treeLinkText: { textAlign: "center", fontWeight: "700", color: "#2e7d32" },
   listHeader: { marginTop: 22, marginBottom: 4, fontSize: 15, fontWeight: "700", color: "#333" },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
-  rowEmoji: { fontSize: 18 },
   rowTitle: { fontSize: 15, flex: 1 },
   rowHint: { color: "#e11d48", fontSize: 12, fontWeight: "600" },
   empty: { color: "#888", marginTop: 16 },
