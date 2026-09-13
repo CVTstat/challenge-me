@@ -38,7 +38,13 @@ export type MainTabParamList = {
 };
 
 export type RootStackParamList = {
-  MainTabs: undefined;
+  // หน้าแรกของแต่ละแท็บ (อยู่ก้น stack ของแท็บนั้น ๆ)
+  HomeMain: undefined;
+  GlobalMain: undefined;
+  ChallengeMain: undefined;
+  CommunityMain: undefined;
+  MeMain: undefined;
+  // หน้าย่อยที่ใช้ร่วมกันทุกแท็บ
   ChallengeDetail: { challengeId: string };
   ManageSupporters: { challengeId: string };
   AskForHelp: { challengeId: string };
@@ -52,7 +58,7 @@ export type RootStackParamList = {
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
-const RootStack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AuthNavigator() {
   // ถ้ามีคนกดลิงก์ "ท้าเพื่อน" มาก่อน login ให้เห็นตัวอย่าง Challenge
@@ -67,15 +73,108 @@ function AuthNavigator() {
   );
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// โครงสร้างการนำทาง (ปรับตาม feedback ของผู้ใช้: "ให้แถบแท็บโชว์ทุกหน้า")
+//
+// เดิม: Tab อยู่ข้างในสุดของ Stack ใหญ่ → พอเปิดหน้าย่อย (เช่น Challenge
+// Detail, ท้าเพื่อน, ต้นไม้ของชุมชน) หน้าย่อยจะทับเต็มจอ แถบแท็บด้านล่างหายไป
+// ต้องกดปุ่มย้อนกลับอย่างเดียวถึงจะกลับมาเห็นแท็บอีกครั้ง
+//
+// ใหม่: Tab เป็นตัวนอกสุด แล้วแต่ละแท็บมี Stack ของตัวเอง ซึ่งบรรจุทั้งหน้าแรก
+// ของแท็บนั้นและหน้าย่อยทั้งหมด → เปิดหน้าย่อยจากแท็บไหน หน้านั้นก็เปิดอยู่
+// "ข้างใน" แท็บนั้น แถบแท็บด้านล่างจึงยังอยู่ตลอด สลับแท็บได้ตลอดเวลา
+//
+// หมายเหตุ: หน้าย่อยชุดเดียวกันถูกประกาศซ้ำในทุกแท็บโดยตั้งใจ (เป็น pattern
+// มาตรฐานของ React Navigation) — navigate("ChallengeDetail") จะไปเปิดใน stack
+// ของแท็บที่กำลังใช้งานอยู่เสมอ ไม่ข้ามแท็บกัน ประวัติการกดย้อนกลับของแต่ละ
+// แท็บจึงแยกกันอย่างอิสระ
+// ────────────────────────────────────────────────────────────────────────────
+// คืนค่าเป็น React.Fragment ที่ห่อ Stack.Screen ไว้ข้างใน — React Navigation
+// อนุญาตให้ direct child ของ Navigator เป็น Screen, Group หรือ React.Fragment
+// เท่านั้น (ห้ามเป็น component ของเราเอง) จึงต้องเรียกเป็นฟังก์ชันธรรมดาแบบนี้
+// ไม่ใช่เขียนเป็น <SharedDetailScreens />
+function sharedDetailScreens() {
+  return (
+    <>
+      <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} options={{ title: "Challenge" }} />
+      <Stack.Screen name="ManageSupporters" component={ManageSupportersScreen} options={{ title: "Supporters" }} />
+      <Stack.Screen name="AskForHelp" component={AskForHelpScreen} options={{ title: "Ask for Help" }} />
+      <Stack.Screen
+        name="HelpRequestDetail"
+        component={HelpRequestDetailScreen}
+        options={{ title: "Community Help" }}
+      />
+      <Stack.Screen
+        name="GlobalChallengeDetail"
+        component={GlobalChallengeDetailScreen}
+        options={{ title: "Global Challenge" }}
+      />
+      <Stack.Screen name="EditExpertise" component={EditExpertiseScreen} options={{ title: "What I Can Help With" }} />
+      <Stack.Screen name="InviteFriend" component={InviteFriendScreen} options={{ title: "ท้าเพื่อน" }} />
+      <Stack.Screen name="InviteLanding" component={InviteLandingScreen} options={{ title: "คำท้า" }} />
+      <Stack.Screen name="CommunityTree" component={CommunityTreeScreen} options={{ title: "🌏 ต้นไม้ของพวกเรา" }} />
+    </>
+  );
+}
+
+const stackScreenOptions = { headerTitleAlign: "center" as const };
+
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ title: "🏠 Home" }} />
+      {sharedDetailScreens()}
+    </Stack.Navigator>
+  );
+}
+
+function GlobalStack() {
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Screen name="GlobalMain" component={GlobalScreen} options={{ title: "🌎 Global" }} />
+      {sharedDetailScreens()}
+    </Stack.Navigator>
+  );
+}
+
+function ChallengeStack() {
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Screen name="ChallengeMain" component={CreateChallengeScreen} options={{ title: "➕ Challenge" }} />
+      {sharedDetailScreens()}
+    </Stack.Navigator>
+  );
+}
+
+function CommunityStack() {
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Screen name="CommunityMain" component={CommunityScreen} options={{ title: "❤️ Community" }} />
+      {sharedDetailScreens()}
+    </Stack.Navigator>
+  );
+}
+
+function MeStack() {
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Screen name="MeMain" component={MeScreen} options={{ title: "👤 Me" }} />
+      {sharedDetailScreens()}
+    </Stack.Navigator>
+  );
+}
+
 // 5 แท็บหลักตาม USER-FLOWS.md §0/§18: Home, Global, Challenge, Community, Me
+// ปิด header ของตัว Tab เอง เพราะ header จริงมาจาก Stack ข้างในของแต่ละแท็บ
+// (ไม่งั้นจะเห็นแถบหัวข้อซ้อนกันสองชั้น)
 function MainTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerTitleAlign: "center" }}>
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: "🏠 Home" }} />
-      <Tab.Screen name="Global" component={GlobalScreen} options={{ title: "🌎 Global" }} />
-      <Tab.Screen name="Challenge" component={CreateChallengeScreen} options={{ title: "➕ Challenge" }} />
-      <Tab.Screen name="Community" component={CommunityScreen} options={{ title: "❤️ Community" }} />
-      <Tab.Screen name="Me" component={MeScreen} options={{ title: "👤 Me" }} />
+    <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="Home" component={HomeStack} options={{ title: "🏠 Home" }} />
+      <Tab.Screen name="Global" component={GlobalStack} options={{ title: "🌎 Global" }} />
+      <Tab.Screen name="Challenge" component={ChallengeStack} options={{ title: "➕ Challenge" }} />
+      <Tab.Screen name="Community" component={CommunityStack} options={{ title: "❤️ Community" }} />
+      <Tab.Screen name="Me" component={MeStack} options={{ title: "👤 Me" }} />
     </Tab.Navigator>
   );
 }
@@ -94,7 +193,9 @@ export default function RootNavigator() {
     if (!navReady || !session?.user) return;
     if (token && redirectedForToken.current !== token) {
       redirectedForToken.current = token;
-      navRef.navigate("InviteLanding" as never);
+      // ระบุแท็บให้ชัดเจนว่าไปเปิดใน stack ของแท็บ Home (รูปแบบมาตรฐานสำหรับ
+      // navigator ซ้อนกัน) — ไม่พึ่งการเดาว่าตอนนี้โฟกัสอยู่แท็บไหน
+      navRef.navigate("Home" as never, { screen: "InviteLanding" } as never);
     }
     if (!token) redirectedForToken.current = null;
   }, [navReady, session, token, navRef]);
@@ -109,46 +210,7 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer ref={navRef} onReady={() => setNavReady(true)}>
-      {!session ? (
-        <AuthNavigator />
-      ) : (
-        <RootStack.Navigator>
-          <RootStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
-          <RootStack.Screen
-            name="ChallengeDetail"
-            component={ChallengeDetailScreen}
-            options={{ title: "Challenge" }}
-          />
-          <RootStack.Screen
-            name="ManageSupporters"
-            component={ManageSupportersScreen}
-            options={{ title: "Supporters" }}
-          />
-          <RootStack.Screen name="AskForHelp" component={AskForHelpScreen} options={{ title: "Ask for Help" }} />
-          <RootStack.Screen
-            name="HelpRequestDetail"
-            component={HelpRequestDetailScreen}
-            options={{ title: "Community Help" }}
-          />
-          <RootStack.Screen
-            name="GlobalChallengeDetail"
-            component={GlobalChallengeDetailScreen}
-            options={{ title: "Global Challenge" }}
-          />
-          <RootStack.Screen
-            name="EditExpertise"
-            component={EditExpertiseScreen}
-            options={{ title: "What I Can Help With" }}
-          />
-          <RootStack.Screen name="InviteFriend" component={InviteFriendScreen} options={{ title: "ท้าเพื่อน" }} />
-          <RootStack.Screen name="InviteLanding" component={InviteLandingScreen} options={{ title: "คำท้า" }} />
-          <RootStack.Screen
-            name="CommunityTree"
-            component={CommunityTreeScreen}
-            options={{ title: "🌏 ต้นไม้ของพวกเรา" }}
-          />
-        </RootStack.Navigator>
-      )}
+      {!session ? <AuthNavigator /> : <MainTabs />}
     </NavigationContainer>
   );
 }

@@ -55,19 +55,25 @@ export default function InviteLandingScreen() {
       return;
     }
     clear();
+    // หมายเหตุ: ตั้งแต่เปลี่ยนโครงสร้างให้แถบแท็บโชว์ทุกหน้า (ดู RootNavigator)
+    // หน้านี้จะอยู่ "ข้างใน" stack ของแท็บที่กำลังใช้อยู่ ไม่ใช่ stack แยกที่ทับ
+    // ทั้งจอเหมือนเดิม — จึงใช้ replace/popToTop กับ stack ปัจจุบันแทนการ reset
+    // ไปที่ route ชื่อ MainTabs (ซึ่งไม่มีอยู่แล้ว) แถบแท็บจะได้ไม่หายไป
     if (challengeId) {
-      navigation.reset({
-        index: 1,
-        routes: [{ name: "MainTabs" as never }, { name: "ChallengeDetail" as never, params: { challengeId } as never }],
-      });
+      navigation.replace("ChallengeDetail", { challengeId });
     } else {
-      navigation.navigate("MainTabs" as never);
+      navigation.popToTop();
     }
   }
 
   function handleSkip() {
     clear();
-    navigation.navigate((session?.user ? "MainTabs" : "Login") as never);
+    if (session?.user) {
+      // กลับไปหน้าแรกของแท็บที่กำลังอยู่ (แถบแท็บยังอยู่ครบ)
+      navigation.popToTop();
+      return;
+    }
+    navigation.navigate("Login" as never);
   }
 
   if (loading) {
