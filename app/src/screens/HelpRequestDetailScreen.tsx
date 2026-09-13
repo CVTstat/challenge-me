@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
@@ -59,7 +60,7 @@ export default function HelpRequestDetailScreen() {
     const { error } = await replyToHelpRequest(params.helpRequestId, session.user.id, replyBody.trim());
     setSubmitting(false);
     if (error) {
-      Alert.alert("ตอบไม่สำเร็จ", error);
+      showAlert("ตอบไม่สำเร็จ", error);
       return;
     }
     setReplyBody("");
@@ -68,7 +69,7 @@ export default function HelpRequestDetailScreen() {
 
   async function handleMarkHelpful(replyId: string) {
     const { error } = await markReplyHelpful(replyId);
-    if (error) Alert.alert("ทำไม่สำเร็จ", error);
+    if (error) showAlert("ทำไม่สำเร็จ", error);
     else load();
   }
 

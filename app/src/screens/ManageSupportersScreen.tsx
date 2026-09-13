@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 
@@ -38,7 +39,7 @@ export default function ManageSupportersScreen() {
     // service role (ตาราง auth.users ไม่เปิดให้ query ตรงจาก client ทั่วไป)
     // ที่นี่ใช้ RPC ไปหาใน profiles แทน โดยสมมติว่า client เก็บอีเมลไว้ที่อื่น
     // (เช่น query ผ่าน view ที่ backend เตรียมไว้) — ใส่ placeholder ให้ dev ต่อเอง
-    Alert.alert(
+    showAlert(
       "ต้องต่อ backend เพิ่ม",
       "การค้นหา user จากอีเมลต้องทำผ่าน Edge Function (service role) — ดูคอมเมนต์ในโค้ดนี้สำหรับรายละเอียด " +
         "ตอนนี้ใส่ user id ตรง ๆ แทนได้ถ้าต้องการทดสอบ"
@@ -52,7 +53,7 @@ export default function ManageSupportersScreen() {
     setSubmitting(true);
     const { error } = await inviteSupporter(params.challengeId, session.user.id, userId);
     setSubmitting(false);
-    if (error) Alert.alert("เชิญไม่สำเร็จ", error);
+    if (error) showAlert("เชิญไม่สำเร็จ", error);
     else {
       setInviteEmail("");
       load();
@@ -61,13 +62,13 @@ export default function ManageSupportersScreen() {
 
   async function handleRemove(supporterId: string) {
     const { error } = await removeSupporter(supporterId);
-    if (error) Alert.alert("ลบไม่สำเร็จ", error);
+    if (error) showAlert("ลบไม่สำเร็จ", error);
     else load();
   }
 
   async function handleMute(supporterId: string) {
     const { error } = await muteSupporter(supporterId);
-    if (error) Alert.alert("Mute ไม่สำเร็จ", error);
+    if (error) showAlert("Mute ไม่สำเร็จ", error);
     else load();
   }
 

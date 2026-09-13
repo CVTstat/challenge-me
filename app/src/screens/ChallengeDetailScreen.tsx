@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -94,7 +95,7 @@ export default function ChallengeDetailScreen() {
     setBusy(true);
     const { error } = await fillFirstEye(params.challengeId);
     setBusy(false);
-    if (error) Alert.alert("เติมตาแรกไม่สำเร็จ", error);
+    if (error) showAlert("เติมตาแรกไม่สำเร็จ", error);
     else {
       if (challenge) await generateAndShareCard(challenge, "START");
       load();
@@ -105,7 +106,7 @@ export default function ChallengeDetailScreen() {
     setBusy(true);
     const { error } = await fillSecondEye(params.challengeId);
     setBusy(false);
-    if (error) Alert.alert("เติมตาที่สองไม่สำเร็จ", error);
+    if (error) showAlert("เติมตาที่สองไม่สำเร็จ", error);
     else {
       if (challenge) await generateAndShareCard(challenge, "COMPLETE");
       load();
@@ -117,9 +118,9 @@ export default function ChallengeDetailScreen() {
     setBusy(true);
     const { error } = await submitCheckIn({ challengeAttemptId: attempt.id, valueBool: true });
     setBusy(false);
-    if (error) Alert.alert("Check-in ไม่สำเร็จ", error);
+    if (error) showAlert("Check-in ไม่สำเร็จ", error);
     else {
-      Alert.alert("✓ Check-in วันนี้บันทึกแล้ว");
+      showAlert("✓ Check-in วันนี้บันทึกแล้ว");
       load();
     }
   }
@@ -127,7 +128,7 @@ export default function ChallengeDetailScreen() {
   async function handleCheer() {
     if (!session?.user) return;
     const { error } = await toggleCheer(params.challengeId, session.user.id);
-    if (error) Alert.alert("Cheer ไม่สำเร็จ", error);
+    if (error) showAlert("Cheer ไม่สำเร็จ", error);
     else load();
   }
 
@@ -141,8 +142,8 @@ export default function ChallengeDetailScreen() {
     setBusy(true);
     const { error } = await pushChallenge(params.challengeId, attempt.id, session.user.id);
     setBusy(false);
-    if (error) Alert.alert("Push ไม่สำเร็จ", error);
-    else Alert.alert("🔴 ส่งแรงผลักดันให้แล้ว!");
+    if (error) showAlert("Push ไม่สำเร็จ", error);
+    else showAlert("🔴 ส่งแรงผลักดันให้แล้ว!");
   }
 
   async function handleImBack() {
@@ -157,7 +158,7 @@ export default function ChallengeDetailScreen() {
     setBusy(true);
     const { error } = await tryAgain(params.challengeId);
     setBusy(false);
-    if (error) Alert.alert("เริ่มใหม่ไม่สำเร็จ", error);
+    if (error) showAlert("เริ่มใหม่ไม่สำเร็จ", error);
     else load();
   }
 
@@ -166,20 +167,20 @@ export default function ChallengeDetailScreen() {
     setBusy(true);
     const { error } = await extendChallenge(params.challengeId, attempt.id, 7);
     setBusy(false);
-    if (error) Alert.alert("ขยายเวลาไม่สำเร็จ", error);
+    if (error) showAlert("ขยายเวลาไม่สำเร็จ", error);
     else load();
   }
 
   async function handleChangeGoal() {
     if (!attempt || !challenge) return;
     if (!newGoalText.trim()) {
-      Alert.alert("ใส่เป้าหมายใหม่ก่อน", "อธิบายเป้าหมายใหม่ที่จะเปลี่ยนไป");
+      showAlert("ใส่เป้าหมายใหม่ก่อน", "อธิบายเป้าหมายใหม่ที่จะเปลี่ยนไป");
       return;
     }
     setBusy(true);
     const { error } = await changeGoal(challenge, attempt.id, newGoalText.trim());
     setBusy(false);
-    if (error) Alert.alert("เปลี่ยนเป้าหมายไม่สำเร็จ", error);
+    if (error) showAlert("เปลี่ยนเป้าหมายไม่สำเร็จ", error);
     else {
       setChangeGoalMode(false);
       setNewGoalText("");
@@ -191,7 +192,7 @@ export default function ChallengeDetailScreen() {
     setBusy(true);
     const { error } = await completeMilestone(params.challengeId, milestoneId);
     setBusy(false);
-    if (error) Alert.alert("ทำ Milestone ไม่สำเร็จ", error);
+    if (error) showAlert("ทำ Milestone ไม่สำเร็จ", error);
     else {
       if (challenge) await generateAndShareCard(challenge, "MILESTONE");
       load();

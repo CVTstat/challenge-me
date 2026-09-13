@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { showAlert } from "@/lib/alert";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
@@ -17,16 +18,16 @@ export default function RegisterScreen({ navigation }: Props) {
 
   async function handleRegister() {
     if (!displayName.trim()) {
-      Alert.alert("กรอกไม่ครบ", "ใส่ชื่อที่แสดงก่อนนะ");
+      showAlert("กรอกไม่ครบ", "ใส่ชื่อที่แสดงก่อนนะ");
       return;
     }
     setSubmitting(true);
     const { error } = await signUpWithEmail(email.trim(), password, displayName.trim());
     setSubmitting(false);
     if (error) {
-      Alert.alert("สมัครไม่สำเร็จ", error);
+      showAlert("สมัครไม่สำเร็จ", error);
     } else {
-      Alert.alert("สำเร็จ", "ยืนยันอีเมล (ถ้าโปรเจกต์เปิด email confirmation) แล้วลองเข้าสู่ระบบได้เลย");
+      showAlert("สำเร็จ", "ยืนยันอีเมล (ถ้าโปรเจกต์เปิด email confirmation) แล้วลองเข้าสู่ระบบได้เลย");
       navigation.navigate("Login");
     }
   }

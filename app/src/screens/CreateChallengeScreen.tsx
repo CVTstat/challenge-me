@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
@@ -63,7 +64,7 @@ export default function CreateChallengeScreen() {
       rewardText: rewardText.trim() || undefined,
     });
     if (error || !challenge) {
-      Alert.alert("สร้าง Challenge ไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
+      showAlert("สร้าง Challenge ไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
       return;
     }
     resetForm();
@@ -75,7 +76,7 @@ export default function CreateChallengeScreen() {
     if (!session?.user) return;
     const cleanMilestones = milestoneTitles.map((m) => m.trim()).filter((m) => m.length > 0);
     if (cleanMilestones.length === 0) {
-      Alert.alert("ใส่ Milestone อย่างน้อย 1 รายการ", "Life Challenge ต้องมี Milestone อย่างน้อย 1 ขั้น");
+      showAlert("ใส่ Milestone อย่างน้อย 1 รายการ", "Life Challenge ต้องมี Milestone อย่างน้อย 1 ขั้น");
       return;
     }
     const { challenge, error } = await createLifeChallenge(session.user.id, {
@@ -86,7 +87,7 @@ export default function CreateChallengeScreen() {
       rewardText: rewardText.trim() || undefined,
     });
     if (error || !challenge) {
-      Alert.alert("สร้าง Life Challenge ไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
+      showAlert("สร้าง Life Challenge ไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
       return;
     }
     resetForm();
@@ -96,7 +97,7 @@ export default function CreateChallengeScreen() {
   async function handleSubmit() {
     if (!session?.user) return;
     if (!title.trim() || !category.trim() || !goalDescription.trim()) {
-      Alert.alert("กรอกไม่ครบ", "ใส่ชื่อ Challenge, Category และเป้าหมายก่อนนะ");
+      showAlert("กรอกไม่ครบ", "ใส่ชื่อ Challenge, Category และเป้าหมายก่อนนะ");
       return;
     }
     setSubmitting(true);

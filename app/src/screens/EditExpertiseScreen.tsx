@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -41,14 +42,14 @@ export default function EditExpertiseScreen() {
   async function handleAdd() {
     if (!session?.user) return;
     if (!category.trim() || !label.trim()) {
-      Alert.alert("กรอกไม่ครบ", "ใส่ category และคำอธิบายก่อนนะ");
+      showAlert("กรอกไม่ครบ", "ใส่ category และคำอธิบายก่อนนะ");
       return;
     }
     setSubmitting(true);
     const { error } = await addExpertiseTag(session.user.id, category.trim(), label.trim());
     setSubmitting(false);
     if (error) {
-      Alert.alert("เพิ่มไม่สำเร็จ", error);
+      showAlert("เพิ่มไม่สำเร็จ", error);
       return;
     }
     setCategory("");
@@ -58,7 +59,7 @@ export default function EditExpertiseScreen() {
 
   async function handleRemove(tagId: string) {
     const { error } = await removeExpertiseTag(tagId);
-    if (error) Alert.alert("ลบไม่สำเร็จ", error);
+    if (error) showAlert("ลบไม่สำเร็จ", error);
     else load();
   }
 

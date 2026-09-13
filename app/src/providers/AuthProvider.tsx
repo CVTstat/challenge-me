@@ -40,14 +40,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async signUpWithEmail(email, password, displayName) {
         // Flow 1 (USER-FLOWS.md): สมัครสำเร็จ -> สร้าง profiles row ทันที
         // (FR1.1–FR1.2 ใน FEATURE-REQUIREMENTS.md)
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        //
+        // หมายเหตุ: ตัว trigger public.handle_new_user() (migration 0005) ที่ฝั่ง
+        // DB จะสร้างแถวใน profiles ให้อัตโนมัติอยู่แล้วทุกครั้งที่มี user ใหม่ใน
+        // auth.users — ไม่ว่าจะเปิด/ปิด "Confirm email" ก็ตาม (ทำงานที่ระดับ DB
+        // ไม่ต้องพึ่ง session ของฝั่ง client เลย) ที่ยัง insert เองซ้ำด้านล่างนี้
+        // เป็นแค่ best-effort เผื่อโปรเจกต์ยังไม่ได้รัน migration 0005 — ถ้า insert
+        // ซ้ำ/ไม่ผ่านเพราะยังไม่มี session (ต้องยืนยันอีเมลก่อน) ก็ไม่ถือเป็น error
+        // block การสมัคร เพราะ trigger จัดการให้แล้วอยู่ดี
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { display_name: displayName } },
+        });
         if (error) return { error: error.message };
         const userId = data.user?.id;
         if (userId) {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .insert({ id: userId, display_name: displayName });
-          if (profileError) return { error: profileError.message };
+          await supabase.from("profiles").insert({ id: userId, display_name: displayName });
         }
         return { error: null };
       },

@@ -6,7 +6,6 @@ import {
   Pressable,
   StyleSheet,
   FlatList,
-  Alert,
   Platform,
   Share,
 } from "react-native";
@@ -16,6 +15,7 @@ import type { RootStackParamList } from "@/navigation/RootNavigator";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { getWebBaseUrl } from "@/lib/config";
+import { showAlert } from "@/lib/alert";
 import {
   buildInviteShareUrl,
   getMyChallengeInviteToken,
@@ -61,11 +61,11 @@ export default function InviteFriendScreen() {
     const { error } = await inviteFriendToChallenge(params.challengeId, userId, message.trim() || undefined);
     setBusyUserId(null);
     if (error) {
-      Alert.alert("ชวนไม่สำเร็จ", error);
+      showAlert("ชวนไม่สำเร็จ", error);
       return;
     }
     setInvitedIds((prev) => [...prev, userId]);
-    Alert.alert("🎯 ส่งคำท้าแล้ว!", "เพื่อนจะเห็นคำเชิญนี้ในแท็บ Community");
+    showAlert("🎯 ส่งคำท้าแล้ว!", "เพื่อนจะเห็นคำเชิญนี้ในแท็บ Community");
   }
 
   async function handleShareLink() {
@@ -79,7 +79,7 @@ export default function InviteFriendScreen() {
           await nav.share({ title: "Challenge Me", text, url: shareUrl });
         } else if (nav?.clipboard?.writeText) {
           await nav.clipboard.writeText(shareUrl);
-          Alert.alert("คัดลอกลิงก์แล้ว", "วางลิงก์นี้ตอนโพสต์ลง Facebook แล้วพิมพ์ @แท็กเพื่อนที่อยากท้าได้เลย");
+          showAlert("คัดลอกลิงก์แล้ว", "วางลิงก์นี้ตอนโพสต์ลง Facebook แล้วพิมพ์ @แท็กเพื่อนที่อยากท้าได้เลย");
         }
       } else {
         await Share.share({ message: text, url: shareUrl });

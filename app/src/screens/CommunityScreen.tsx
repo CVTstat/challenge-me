@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, Alert } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
@@ -57,14 +58,14 @@ export default function CommunityScreen() {
 
   async function handleRespond(supporterId: string, accept: boolean) {
     const { error } = await respondToSupporterInvite(supporterId, accept);
-    if (error) Alert.alert("ทำรายการไม่สำเร็จ", error);
+    if (error) showAlert("ทำรายการไม่สำเร็จ", error);
     else load();
   }
 
   async function handleRespondChallengeInvite(inviteId: string, accept: boolean) {
     const { newChallengeId, error } = await respondToChallengeInvite(inviteId, accept);
     if (error) {
-      Alert.alert("ทำรายการไม่สำเร็จ", error);
+      showAlert("ทำรายการไม่สำเร็จ", error);
       return;
     }
     if (accept && newChallengeId) {

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -24,7 +25,7 @@ export default function AskForHelpScreen() {
   async function handleSubmit() {
     if (!session?.user) return;
     if (!body.trim()) {
-      Alert.alert("กรอกคำถามก่อน", "อธิบายสิ่งที่คุณต้องการความช่วยเหลือ");
+      showAlert("กรอกคำถามก่อน", "อธิบายสิ่งที่คุณต้องการความช่วยเหลือ");
       return;
     }
     setSubmitting(true);
@@ -32,7 +33,7 @@ export default function AskForHelpScreen() {
     setSubmitting(false);
 
     if (error || !helpRequest) {
-      Alert.alert("ส่งคำถามไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
+      showAlert("ส่งคำถามไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
       return;
     }
 

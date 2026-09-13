@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { showAlert } from "@/lib/alert";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
@@ -17,7 +18,7 @@ export default function LoginScreen({ navigation }: Props) {
     setSubmitting(true);
     const { error } = await signInWithEmail(email.trim(), password);
     setSubmitting(false);
-    if (error) Alert.alert("เข้าสู่ระบบไม่สำเร็จ", error);
+    if (error) showAlert("เข้าสู่ระบบไม่สำเร็จ", error);
   }
 
   return (

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
@@ -50,7 +51,7 @@ export default function InviteLandingScreen() {
     const { challengeId, error } = await acceptChallengeInviteByToken(token);
     setBusy(false);
     if (error) {
-      Alert.alert("รับคำท้าไม่สำเร็จ", error);
+      showAlert("รับคำท้าไม่สำเร็จ", error);
       return;
     }
     clear();

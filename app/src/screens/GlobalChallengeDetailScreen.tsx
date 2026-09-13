@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Switch } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator, Switch } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -40,7 +41,7 @@ export default function GlobalChallengeDetailScreen() {
     if (!session?.user || !globalChallenge) return;
     // FR20.3: ต้องยอมรับเงื่อนไข (consent) ก่อนจะ join ได้เสมอ
     if (!consentAccepted) {
-      Alert.alert("ยอมรับเงื่อนไขก่อน", "กรุณายอมรับเงื่อนไขการเข้าร่วมก่อนกดเข้าร่วม Challenge");
+      showAlert("ยอมรับเงื่อนไขก่อน", "กรุณายอมรับเงื่อนไขการเข้าร่วมก่อนกดเข้าร่วม Challenge");
       return;
     }
     setJoining(true);
@@ -48,7 +49,7 @@ export default function GlobalChallengeDetailScreen() {
     setJoining(false);
 
     if (error || !challengeId) {
-      Alert.alert("เข้าร่วมไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
+      showAlert("เข้าร่วมไม่สำเร็จ", error ?? "ลองใหม่อีกครั้ง");
       return;
     }
 
