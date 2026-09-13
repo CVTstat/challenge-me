@@ -24,7 +24,7 @@ import { colors, font, radius, shadow, spacing } from "@/theme";
 import type { ChallengeType, MeasurementType } from "@/types/database";
 
 const MEASUREMENT_OPTIONS: { value: MeasurementType; label: string }[] = [
-  { value: "YES_NO", label: "Yes / No" },
+  { value: "YES_NO", label: "ทำได้/ไม่ได้" },
   { value: "COUNT", label: "จำนวนครั้ง" },
   { value: "DISTANCE", label: "ระยะทาง" },
   { value: "TIME", label: "เวลา" },
@@ -215,7 +215,7 @@ export default function CreateChallengeScreen() {
       <Text style={styles.label}>ชื่อ Challenge</Text>
       <TextInput
         style={styles.input}
-        placeholder={type === "PERSONAL" ? "เช่น ไม่สูบบุหรี่ 30 วัน" : "เช่น เปลี่ยนอาชีพเป็นหมอ"}
+        placeholder={type === "PERSONAL" ? "เช่น ไม่สูบบุหรี่ 30 วัน" : "เช่น เรียนจบปริญญา"}
         value={title}
         onChangeText={setTitle}
       />
@@ -298,10 +298,13 @@ export default function CreateChallengeScreen() {
         </>
       )}
 
+      {/* รางวัลของสองโหมดคนละสเกลกัน — Personal คือเป้าหมายระยะสั้น ตัวอย่าง
+          รางวัลเลยเป็นอะไรเล็ก ๆ ในชีวิตประจำวัน ส่วน Life คือเป้าหมายใหญ่ของ
+          ชีวิต ตัวอย่างจึงเป็นโมเมนต์ที่มีความหมายกับเรามากกว่า */}
       <Text style={styles.label}>Reward (ไม่บังคับ)</Text>
       <TextInput
         style={styles.input}
-        placeholder="เช่น ลูกสาวให้หอม 1 ที ❤️"
+        placeholder={type === "PERSONAL" ? "เช่น ลูกสาวให้หอม 1 ที ❤️" : "เช่น ได้กอดพ่อกับแม่ ❤️"}
         value={rewardText}
         onChangeText={setRewardText}
       />

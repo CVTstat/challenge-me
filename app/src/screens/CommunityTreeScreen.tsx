@@ -1,26 +1,48 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "@/navigation/RootNavigator";
 
+import { useAuth } from "@/providers/AuthProvider";
+import { supabase } from "@/lib/supabase";
 import TreeCanvas, { nextMilestone, TREE_CAPACITY } from "@/components/TreeCanvas";
+import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
 import { ProgressBar, StatTile } from "@/components/ui";
 import { colors, font, radius, shadow, spacing } from "@/theme";
 import { getTreeStats } from "@/api/tree";
 import type { TreeStats } from "@/api/tree";
+import type { DarumaRow } from "@/types/database";
+
+type DarumaWithChallenge = DarumaRow & { challenges: { title: string } | null };
 
 // ต้นไม้ของทั้งชุมชน — ตาม feedback ของผู้ใช้ที่อยากเห็น "ความสำเร็จทั้งหมด
 // ในแพลตฟอร์มเป็นต้นไม้ของทั้งแพลตฟอร์ม" คู่กับ "ต้นไม้ส่วนตัวของเรา"
 // ทุกใบบนต้นนี้คือความสำเร็จจริงของใครสักคนในแอป รวมของเราอยู่ในนั้นด้วย
 export default function CommunityTreeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { session } = useAuth();
   const [stats, setStats] = useState<TreeStats | null>(null);
+  const [darumas, setDarumas] = useState<DarumaWithChallenge[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { stats: s } = await getTreeStats();
     setStats(s);
+
+    // ดารุมะของเราแต่ละตัว = หนึ่ง Challenge (ย้ายมาจากหน้า Me ตามที่ผู้ใช้ขอ
+    // ให้มาอยู่ต่อจาก "ต้นไม้ของฉันในป่านี้" — ต้นไม้บอกภาพรวม ส่วนดารุมะบอก
+    // ว่าตัวไหนยังค้างอยู่)
+    if (session?.user) {
+      const { data } = await supabase
+        .from("daruma")
+        .select("*, challenges!inner(title, owner_id)")
+        .eq("challenges.owner_id", session.user.id);
+      setDarumas((data ?? []) as DarumaWithChallenge[]);
+    }
     setLoading(false);
-  }, []);
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,6 +107,35 @@ export default function CommunityTreeScreen() {
         )}
       </View>
 
+      {/* ดารุมะของฉัน — ย้ายมาจากหน้า Me ตามที่ผู้ใช้ขอ
+          ต้นไม้ด้านบนบอก "ภาพรวมว่าสำเร็จไปกี่อย่างแล้ว" ส่วนตรงนี้ลงรายละเอียด
+          ว่าแต่ละเป้าหมายอยู่ตรงไหน ตัวไหนยังไม่ได้เริ่ม ตัวไหนรอตาข้างที่สอง */}
+      <Text style={styles.sectionTitle}>🎯 ดารุมะของฉัน</Text>
+      {darumas.length === 0 ? (
+        <Text style={styles.empty}>ยังไม่มีดารุมะเลย — สร้าง Challenge แรกกันเถอะ</Text>
+      ) : (
+        <View style={styles.darumaGrid}>
+          {darumas.map((item) => {
+            const eyes = darumaEyesFrom(item.left_eye_filled_at, item.right_eye_filled_at);
+            return (
+              <Pressable
+                key={item.id}
+                style={styles.darumaCell}
+                onPress={() => navigation.navigate("ChallengeDetail", { challengeId: item.challenge_id })}
+              >
+                <DarumaCanvas eyes={eyes} width={64} />
+                <Text style={styles.darumaName} numberOfLines={2}>
+                  {item.challenges?.title ?? "-"}
+                </Text>
+                <Text style={[styles.darumaState, eyes === 2 && { color: colors.primary }]}>
+                  {eyes === 2 ? "สำเร็จแล้ว 🍃" : eyes === 1 ? "กำลังพยายาม" : "ยังไม่เริ่ม"}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
       <Text style={styles.footnote}>
         ต้นไม้ไม่ได้โตเพราะความตั้งใจ แต่โตเพราะสิ่งที่ทำสำเร็จจริง — ใบไม้จะขึ้นก็ต่อเมื่อคุณกดว่า
         &quot;ทำสำเร็จแล้ว&quot; ด้วยตัวเองเท่านั้น
@@ -114,6 +165,22 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg, alignSelf: "stretch" },
   goalLine: { marginTop: spacing.md, fontSize: font.small, color: colors.textMuted, textAlign: "center" },
   sectionTitle: { marginTop: spacing.xxl, fontSize: font.h3, fontWeight: "700", color: colors.text },
+  empty: { color: colors.textFaint, marginTop: spacing.md },
+  darumaGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.md },
+  darumaCell: {
+    width: "30.5%",
+    minWidth: 96,
+    flexGrow: 1,
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  darumaName: { fontSize: font.tiny, fontWeight: "700", color: colors.text, textAlign: "center", marginTop: 6 },
+  darumaState: { fontSize: font.tiny, color: colors.textFaint, marginTop: 2 },
   footnote: {
     marginTop: spacing.xxl,
     fontSize: font.tiny,

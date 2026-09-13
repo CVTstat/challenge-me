@@ -8,8 +8,7 @@ import type { RootStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import TreeCanvas, { nextMilestone } from "@/components/TreeCanvas";
-import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
-import { Avatar, Card, ProgressBar, SectionTitle, StatTile } from "@/components/ui";
+import { Avatar, Card, ProgressBar, StatTile } from "@/components/ui";
 import { colors, font, radius, spacing } from "@/theme";
 import type { DarumaRow, ProfileRow } from "@/types/database";
 
@@ -88,32 +87,11 @@ export default function MeScreen() {
         </Pressable>
       </Card>
 
-      {/* คอลเลกชันดารุมะ */}
-      <SectionTitle>ดารุมะของฉัน</SectionTitle>
-      {seeds > 0 && <Text style={styles.seedLine}>มีดารุมะ {seeds} ตัวที่ยังไม่ได้เติมตาเลย — แตะเพื่อเริ่ม</Text>}
-      {darumas.length === 0 ? (
-        <Text style={styles.empty}>ยังไม่มีดารุมะเลย — สร้าง Challenge แรกกันเถอะ</Text>
-      ) : (
-        <View style={styles.darumaGrid}>
-          {darumas.map((item) => {
-            const eyes = darumaEyesFrom(item.left_eye_filled_at, item.right_eye_filled_at);
-            return (
-              <Pressable
-                key={item.id}
-                style={styles.darumaCell}
-                onPress={() => navigation.navigate("ChallengeDetail", { challengeId: item.challenge_id })}
-              >
-                <DarumaCanvas eyes={eyes} width={64} />
-                <Text style={styles.darumaName} numberOfLines={2}>
-                  {item.challenges?.title ?? "-"}
-                </Text>
-                <Text style={[styles.darumaState, eyes === 2 && { color: colors.primary }]}>
-                  {eyes === 2 ? "สำเร็จแล้ว 🍃" : eyes === 1 ? "กำลังพยายาม" : "ยังไม่เริ่ม"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      {/* คอลเลกชันดารุมะย้ายไปอยู่หน้า "ต้นไม้ของพวกเรา" แล้ว (ตามที่ผู้ใช้ขอ)
+          — อยู่ต่อจากต้นไม้ของเราเองในหน้านั้น เข้าได้จากการ์ดด้านบนหรือเมนู
+          ข้างล่าง หน้านี้จึงเหลือแค่โปรไฟล์ สถิติ และเมนู */}
+      {seeds > 0 && (
+        <Text style={styles.seedLine}>มีดารุมะ {seeds} ตัวที่ยังไม่ได้เติมตาเลย — ดูได้ที่ต้นไม้ของพวกเรา</Text>
       )}
 
       {/* เมนู */}
@@ -167,21 +145,6 @@ const styles = StyleSheet.create({
 
   seedLine: { fontSize: font.small, color: colors.amber, marginBottom: spacing.sm },
   empty: { color: colors.textFaint, marginTop: spacing.sm },
-  darumaGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  darumaCell: {
-    width: "30.5%",
-    minWidth: 96,
-    flexGrow: 1,
-    alignItems: "center",
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-  },
-  darumaName: { fontSize: font.tiny, fontWeight: "700", color: colors.text, textAlign: "center", marginTop: 6 },
-  darumaState: { fontSize: font.tiny, color: colors.textFaint, marginTop: 2 },
 
   menu: { marginTop: spacing.xxl, backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border },
   menuRow: {
