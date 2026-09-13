@@ -100,13 +100,47 @@ export default function InviteFriendScreen() {
     setLinkBusy(false);
   }
 
-  function handleOpenFacebookSharer() {
+  async function handleOpenFacebookSharer() {
     if (!shareUrl) return;
     const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+    const caption = "🎯 ท้าให้มาทำ Challenge นี้ด้วยกัน! เปิดลิงก์นี้แล้วรับคำท้าได้เลย";
+    // หมายเหตุ (แก้บั๊ก): บนมือถือที่ลง Facebook app ไว้ การเปิด
+    // facebook.com/sharer/sharer.php ด้วย window.open() จะโดน iOS/Android
+    // "universal link" ดักไปเปิดแอป Facebook เฉย ๆ (เข้าหน้า feed ปกติ) โดย
+    // ไม่มีกล่องโพสต์/พรีวิวขึ้นมาให้เลย — ต่างจากเดสก์ท็อป (ไม่มีแอปให้ดัก)
+    // ที่กล่อง sharer.php เด้งขึ้นมาใช้งานได้ปกติ
+    //
+    // ทางแก้: ให้พยายามใช้ Web Share API (navigator.share) ก่อนเสมอเมื่อมี —
+    // มันจะเปิด "share sheet" ของระบบปฏิบัติการเอง ให้ผู้ใช้เลือกแอป Facebook
+    // จากรายการได้ตรง ๆ ซึ่งเป็นกลไกเดียวกับปุ่ม "แชร์ลิงก์" ที่ยืนยันแล้วว่า
+    // ใช้งานได้จริงกับ LINE — เหลือ window.open(sharer.php) ไว้เป็น fallback
+    // สำหรับกรณีที่ไม่มี navigator.share เท่านั้น (ส่วนใหญ่คือเดสก์ท็อป ซึ่ง
+    // ก็คือจุดที่ sharer.php ทำงานได้ดีอยู่แล้ว)
     if (Platform.OS === "web" && typeof window !== "undefined") {
+      const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
+      if (nav?.share) {
+        try {
+          await nav.share({ title: "Challenge Me", text: caption, url: shareUrl });
+          return;
+        } catch {
+          // ผู้ใช้กดยกเลิก share sheet — ไม่ต้องทำอะไรต่อ (ไม่ fallback ไป
+          // เปิด sharer.php ซ้ำ เดี๋ยวจะงงว่าทำไมมีอะไรเด้งขึ้นมาอีก)
+          return;
+        }
+      }
       window.open(fbUrl, "_blank", "noopener,noreferrer");
+    } else if (Platform.OS === "ios") {
+      try {
+        await Share.share({ message: caption, url: shareUrl });
+      } catch {
+        // ผู้ใช้กดยกเลิกกล่องแชร์
+      }
     } else {
-      Share.share({ message: fbUrl, url: fbUrl });
+      try {
+        await Share.share({ message: `${caption}\n${shareUrl}` });
+      } catch {
+        // ผู้ใช้กดยกเลิกกล่องแชร์
+      }
     }
   }
 
