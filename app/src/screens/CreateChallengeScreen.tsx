@@ -16,6 +16,8 @@ import {
   targetLabel,
   targetPlaceholder,
 } from "@/lib/measurement";
+import { CHALLENGE_CATEGORIES } from "@/lib/categories";
+import CategoryPicker from "@/components/CategoryPicker";
 import type { ChallengeType, MeasurementType } from "@/types/database";
 
 const MEASUREMENT_OPTIONS: { value: MeasurementType; label: string }[] = [
@@ -214,7 +216,7 @@ export default function CreateChallengeScreen() {
       />
 
       <Text style={styles.label}>Category</Text>
-      <TextInput style={styles.input} placeholder="เช่น health, career, finance" value={category} onChangeText={setCategory} />
+      <CategoryPicker options={CHALLENGE_CATEGORIES} value={category} onChange={setCategory} />
 
       <Text style={styles.label}>เป้าหมาย</Text>
       <TextInput

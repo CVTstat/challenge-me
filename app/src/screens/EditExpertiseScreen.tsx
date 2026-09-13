@@ -5,6 +5,8 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { addExpertiseTag, listMyBadges, listMyExpertiseTags, removeExpertiseTag } from "@/api/expertise";
+import { EXPERTISE_CATEGORIES } from "@/lib/categories";
+import CategoryPicker from "@/components/CategoryPicker";
 import type { CommunityBadgeRow, ExpertiseTagRow } from "@/types/database";
 
 const BADGE_LABEL: Record<string, string> = {
@@ -76,12 +78,7 @@ export default function EditExpertiseScreen() {
       )}
 
       <Text style={styles.label}>Category</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="เช่น smoking_cessation, running, career_medicine"
-        value={category}
-        onChangeText={setCategory}
-      />
+      <CategoryPicker options={EXPERTISE_CATEGORIES} value={category} onChange={setCategory} />
       <Text style={styles.label}>อธิบายว่าช่วยเรื่องนี้ได้อย่างไร</Text>
       <TextInput
         style={styles.input}
