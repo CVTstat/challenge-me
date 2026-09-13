@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Challenge Me",
+    "slug": "challenge-me",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "challengeme",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.challengeme.app"
+    },
+    "android": {
+      "package": "com.challengeme.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "process.env.EXPO_PUBLIC_SUPABASE_URL",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY"
+    }
+  }
+}

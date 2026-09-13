@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npx expo export -p web",
+  "outputDirectory": "dist",
+  "installCommand": "npm install --legacy-peer-deps",
+  "rewrites": [
+    { "source": "/invite/:token", "destination": "/api/invite/:token" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
