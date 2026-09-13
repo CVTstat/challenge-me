@@ -442,8 +442,9 @@ create policy "daruma_select_via_challenge" on public.daruma for select
     where c.id = daruma.challenge_id
       and (c.owner_id = auth.uid() or (c.privacy_level = 'PUBLIC' and c.status <> 'DRAFT'))
   ));
-create policy "daruma_update_owner_only" on public.daruma for update
-  using (exists (select 1 from public.challenges c where c.id = daruma.challenge_id and c.owner_id = auth.uid()));
+create policy "daruma_write_owner" on public.daruma for all
+  using (exists (select 1 from public.challenges c where c.id = daruma.challenge_id and c.owner_id = auth.uid()))
+  with check (exists (select 1 from public.challenges c where c.id = daruma.challenge_id and c.owner_id = auth.uid()));
 
 create policy "checkins_select_via_challenge" on public.check_ins for select
   using (exists (
