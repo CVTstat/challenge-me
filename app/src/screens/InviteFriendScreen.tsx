@@ -9,6 +9,7 @@ import {
   Platform,
   Share,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
@@ -68,39 +69,32 @@ export default function InviteFriendScreen() {
     showAlert("🎯 ส่งคำท้าแล้ว!", "เพื่อนจะเห็นคำเชิญนี้ในแท็บ Community");
   }
 
-  async function handleShareLink() {
+  // ตามที่ผู้ใช้ขอ: เปลี่ยนปุ่มนี้จาก "แชร์ลิงก์" (เด้งเมนูแชร์ของเครื่อง) เป็น
+  // "คัดลอกลิงก์" ตรง ๆ — ผู้ใช้เอาไปวางเองในช่องทางไหนก็ได้ตามใจ ไม่ต้องเดา
+  // ว่าแต่ละแอปจะจัดการยังไง (บั๊กเรื่องลิงก์ซ้ำ/พรีวิวไม่ขึ้นที่เคยเจอกับ
+  // LINE จะไม่มีทางเกิดอีกเลย เพราะผู้ใช้เป็นคนวางลิงก์ล้วน ๆ เองตรง ๆ)
+  async function handleCopyLink() {
     if (!shareUrl) return;
     setLinkBusy(true);
-    // หมายเหตุ (แก้บั๊ก): ห้ามใส่ shareUrl ไว้ใน "ข้อความ" (text/message) แล้ว
-    // ส่ง url แยกไปด้วยพร้อมกัน — บาง share target (เช่น LINE ที่เจอปัญหานี้
-    // จริง) จะเอาทั้งสองค่ามาต่อกัน กลายเป็นลิงก์โผล่ซ้ำ 2 รอบในข้อความเดียว
-    // และ LINE ก็จะไม่โชว์การ์ดพรีวิวรูปภาพให้ด้วย (เห็นเป็นข้อความเปล่า ๆ)
-    // เพราะไม่ใช่ "แค่ลิงก์ล้วน ๆ" อีกต่อไป — ให้ข้อความมีแค่คำชวน ส่วนลิงก์
-    // ให้แต่ละแพลตฟอร์ม/แอปจัดการแนบเองแยกต่างหาก จะได้ขึ้นพรีวิวสวย ๆ
-    const caption = "🎯 ท้าให้มาทำ Challenge นี้ด้วยกัน! เปิดลิงก์นี้แล้วรับคำท้าได้เลย";
     try {
       if (Platform.OS === "web") {
         const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
-        if (nav?.share) {
-          await nav.share({ title: "Challenge Me", text: caption, url: shareUrl });
-        } else if (nav?.clipboard?.writeText) {
+        if (nav?.clipboard?.writeText) {
           await nav.clipboard.writeText(shareUrl);
-          showAlert("คัดลอกลิงก์แล้ว", "วางลิงก์นี้ตอนโพสต์ลง Facebook แล้วพิมพ์ @แท็กเพื่อนที่อยากท้าได้เลย");
+        } else {
+          throw new Error("no clipboard api");
         }
-      } else if (Platform.OS === "ios") {
-        // iOS: message กับ url แยกกันได้จริง ไม่ซ้ำกัน
-        await Share.share({ message: caption, url: shareUrl });
       } else {
-        // Android: RN Share ไม่มี field url แยก ต้องต่อท้ายในข้อความเอง
-        await Share.share({ message: `${caption}\n${shareUrl}` });
+        await Clipboard.setStringAsync(shareUrl);
       }
+      showAlert("คัดลอกลิงก์แล้ว", "วางลิงก์นี้ในแอปที่อยากแชร์ได้เลย เช่น Facebook, LINE, Messenger");
     } catch {
-      // ผู้ใช้กดยกเลิกกล่องแชร์ — ไม่ต้องแจ้ง error
+      showAlert("คัดลอกไม่สำเร็จ", "ลองแตะค้างที่ลิงก์ด้านบนแล้วคัดลอกเองได้เลยครับ");
     }
     setLinkBusy(false);
   }
 
-  async function handleOpenFacebookSharer() {
+  async function handleShareToSocial() {
     if (!shareUrl) return;
     const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
     const caption = "🎯 ท้าให้มาทำ Challenge นี้ด้วยกัน! เปิดลิงก์นี้แล้วรับคำท้าได้เลย";
@@ -111,11 +105,13 @@ export default function InviteFriendScreen() {
     // ที่กล่อง sharer.php เด้งขึ้นมาใช้งานได้ปกติ
     //
     // ทางแก้: ให้พยายามใช้ Web Share API (navigator.share) ก่อนเสมอเมื่อมี —
-    // มันจะเปิด "share sheet" ของระบบปฏิบัติการเอง ให้ผู้ใช้เลือกแอป Facebook
-    // จากรายการได้ตรง ๆ ซึ่งเป็นกลไกเดียวกับปุ่ม "แชร์ลิงก์" ที่ยืนยันแล้วว่า
-    // ใช้งานได้จริงกับ LINE — เหลือ window.open(sharer.php) ไว้เป็น fallback
-    // สำหรับกรณีที่ไม่มี navigator.share เท่านั้น (ส่วนใหญ่คือเดสก์ท็อป ซึ่ง
-    // ก็คือจุดที่ sharer.php ทำงานได้ดีอยู่แล้ว)
+    // มันจะเปิด "share sheet" ของระบบปฏิบัติการเอง ให้ผู้ใช้เลือกแอปที่จะโพสต์
+    // ได้เอง (Facebook, LINE, IG, ฯลฯ) — เหมาะกับปุ่มนี้ที่เปลี่ยนชื่อเป็น
+    // "โพสต์ลง Social ของคุณ" (ไม่ผูกกับ Facebook แอปเดียวอีกต่อไป) และเป็น
+    // กลไกเดียวกับที่ยืนยันแล้วว่าใช้งานได้จริงกับ LINE — เหลือ
+    // window.open(sharer.php) ไว้เป็น fallback สำหรับกรณีที่ไม่มี
+    // navigator.share เท่านั้น (ส่วนใหญ่คือเดสก์ท็อป ซึ่งจะพาไปที่ Facebook
+    // โดยตรง เพราะเดสก์ท็อปเบราว์เซอร์ส่วนใหญ่ไม่มี share sheet ของระบบให้เลือก)
     if (Platform.OS === "web" && typeof window !== "undefined") {
       const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
       if (nav?.share) {
@@ -159,11 +155,11 @@ export default function InviteFriendScreen() {
         </View>
       )}
       <View style={styles.row}>
-        <Pressable style={[styles.primaryButton, styles.flex1]} onPress={handleShareLink} disabled={linkBusy || !shareUrl}>
-          <Text style={styles.primaryButtonText}>📤 แชร์ลิงก์</Text>
+        <Pressable style={[styles.primaryButton, styles.flex1]} onPress={handleCopyLink} disabled={linkBusy || !shareUrl}>
+          <Text style={styles.primaryButtonText}>📋 คัดลอกลิงก์</Text>
         </Pressable>
-        <Pressable style={[styles.fbButton, styles.flex1]} onPress={handleOpenFacebookSharer} disabled={!shareUrl}>
-          <Text style={styles.fbButtonText}>📘 โพสต์ลง Facebook</Text>
+        <Pressable style={[styles.socialButton, styles.flex1]} onPress={handleShareToSocial} disabled={!shareUrl}>
+          <Text style={styles.socialButtonText}>📱 โพสต์ลง Social ของคุณ</Text>
         </Pressable>
       </View>
 
@@ -221,8 +217,8 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 12 },
   primaryButtonText: { color: "white", textAlign: "center", fontWeight: "700" },
-  fbButton: { backgroundColor: "#1877F2", borderRadius: 8, padding: 12 },
-  fbButtonText: { color: "white", textAlign: "center", fontWeight: "700" },
+  socialButton: { backgroundColor: "#333844", borderRadius: 8, padding: 12 },
+  socialButtonText: { color: "white", textAlign: "center", fontWeight: "700" },
   divider: { height: 1, backgroundColor: "#eee", marginVertical: 24 },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, backgroundColor: "white" },
   messageInput: { marginTop: 10, minHeight: 60, textAlignVertical: "top" },
