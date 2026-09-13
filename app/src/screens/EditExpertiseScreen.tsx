@@ -7,6 +7,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { addExpertiseTag, listMyBadges, listMyExpertiseTags, removeExpertiseTag } from "@/api/expertise";
 import { EXPERTISE_CATEGORIES } from "@/lib/categories";
 import CategoryPicker from "@/components/CategoryPicker";
+import { PrimaryButton } from "@/components/ui";
+import { colors, font, radius, spacing } from "@/theme";
 import type { CommunityBadgeRow, ExpertiseTagRow } from "@/types/database";
 
 const BADGE_LABEL: Record<string, string> = {
@@ -83,12 +85,16 @@ export default function EditExpertiseScreen() {
       <TextInput
         style={styles.input}
         placeholder="เช่น คนที่เลิกบุหรี่สำเร็จ 5 ปี"
+        placeholderTextColor={colors.textFaint}
         value={label}
         onChangeText={setLabel}
       />
-      <Pressable style={styles.primaryButton} onPress={handleAdd} disabled={submitting}>
-        <Text style={styles.primaryButtonText}>{submitting ? "กำลังเพิ่ม..." : "+ เพิ่ม"}</Text>
-      </Pressable>
+      <PrimaryButton
+        label={submitting ? "กำลังเพิ่ม..." : "+ เพิ่ม"}
+        onPress={handleAdd}
+        disabled={submitting}
+        style={{ marginTop: spacing.md }}
+      />
 
       <FlatList
         style={{ marginTop: 16 }}
@@ -112,17 +118,40 @@ export default function EditExpertiseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  badgeChip: { backgroundColor: "#fff7ed", borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12 },
-  badgeText: { fontSize: 13, fontWeight: "600" },
-  label: { fontWeight: "600", marginTop: 8 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 15, marginTop: 4 },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 12, marginTop: 12 },
-  primaryButtonText: { color: "white", textAlign: "center", fontWeight: "600" },
-  tagRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: "#eee" },
-  tagCategory: { fontWeight: "600" },
-  tagLabel: { color: "#666" },
-  removeText: { color: "#e11d48" },
-  empty: { color: "#888", marginTop: 24, textAlign: "center" },
+  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
+  badgeChip: {
+    backgroundColor: colors.amberSoft,
+    borderRadius: radius.pill,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#f5e0b5",
+  },
+  badgeText: { fontSize: font.small, fontWeight: "700", color: colors.text },
+  label: { fontWeight: "700", marginTop: spacing.md, color: colors.text, fontSize: font.body },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: 13,
+    fontSize: font.body,
+    color: colors.text,
+    marginTop: 6,
+  },
+  tagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  tagCategory: { fontWeight: "700", color: colors.text },
+  tagLabel: { color: colors.textMuted, fontSize: font.small, marginTop: 2 },
+  removeText: { color: colors.accent, fontWeight: "700", fontSize: font.small },
+  empty: { color: colors.textFaint, marginTop: spacing.xxl, textAlign: "center" },
 });

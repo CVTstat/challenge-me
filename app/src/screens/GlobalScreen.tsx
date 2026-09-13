@@ -1,27 +1,35 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, Linking } from "react-native";
+import { View, Text, FlatList, StyleSheet, RefreshControl, Linking } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
 
 import { listPublishedGlobalChallenges } from "@/api/challenges";
+import { getTreeStats } from "@/api/tree";
+import type { TreeStats } from "@/api/tree";
+import TreeCanvas, { nextMilestone, TREE_CAPACITY } from "@/components/TreeCanvas";
+import { Card, EmptyState, PrimaryButton, SectionTitle, StatTile } from "@/components/ui";
+import { colors, font, radius, spacing } from "@/theme";
 import type { GlobalChallengeRow } from "@/types/database";
 
 const CONTACT_EMAIL = "cvtstat@gmail.com";
 
-// Flow 16 (USER-FLOWS.md §16) — [Global tab]: Featured/Trending/New/Closing Soon
-// (เวอร์ชันนี้แสดงเป็น list เดียวก่อน — แยก section ตาม Master Concept ทำเพิ่มได้
-// จากการ sort/filter query เดิมโดยไม่ต้องแก้ schema)
+// Flow 16 (USER-FLOWS.md §16) — [Global tab]: ภาพรวมของทั้งแพลตฟอร์ม +
+// Global Challenge ที่เปิดรับสมัคร + ช่องทางให้องค์กร/คนทั่วไปส่งไอเดียเข้ามา
 export default function GlobalScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<GlobalChallengeRow[]>([]);
+  const [tree, setTree] = useState<TreeStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { globalChallenges } = await listPublishedGlobalChallenges();
+    const [{ globalChallenges }, { stats }] = await Promise.all([listPublishedGlobalChallenges(), getTreeStats()]);
     setItems(globalChallenges as GlobalChallengeRow[]);
+    setTree(stats);
     setLoading(false);
   }, []);
 
@@ -48,79 +56,148 @@ export default function GlobalScreen() {
     }
   }
 
+  const platformLeaves = tree?.platformLeaves ?? 0;
+  const platformGrowing = tree?.platformGrowing ?? 0;
+  const growers = tree?.platformGrowers ?? 0;
+  const goal = nextMilestone(platformLeaves);
+  const scaled = (value: number) => (goal <= 0 ? 0 : Math.round((value / goal) * TREE_CAPACITY));
+
   return (
     <FlatList
-      contentContainerStyle={styles.list}
+      style={styles.screen}
+      contentContainerStyle={[styles.list, { paddingTop: insets.top + spacing.md }]}
       data={items}
       keyExtractor={(item) => item.id}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.primary} />}
+      ListHeaderComponent={
+        <View>
+          <Text style={styles.header}>🌏 Global</Text>
+          <Text style={styles.subheader}>รวมพลัง สร้างการเปลี่ยนแปลงที่ใหญ่กว่า</Text>
+
+          {/* ต้นไม้รวมของทั้งแพลตฟอร์ม */}
+          <Card style={styles.heroCard} onPress={() => navigation.navigate("CommunityTree")}>
+            <TreeCanvas
+              leaves={scaled(platformLeaves)}
+              buds={scaled(platformGrowing)}
+              width={190}
+              showEmptySlots={false}
+            />
+            <Text style={styles.heroText}>
+              มาร่วมกันสร้างต้นไม้แห่งการเปลี่ยนแปลง{"\n"}ให้โลกใบนี้น่าอยู่ขึ้น
+            </Text>
+            <View style={styles.statRow}>
+              <StatTile
+                emoji="🍃"
+                value={platformLeaves.toLocaleString()}
+                label="ใบไม้ที่ได้แล้ว"
+                color={colors.primary}
+              />
+              <StatTile emoji="👥" value={growers.toLocaleString()} label="ผู้ร่วมทาง" color={colors.accent} />
+              <StatTile emoji="🎯" value={items.length} label="Global Challenge" color={colors.amber} />
+            </View>
+          </Card>
+
+          <SectionTitle>Global Challenge ที่กำลังเปิดรับสมัคร</SectionTitle>
+        </View>
+      }
       ListEmptyComponent={
         !loading ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>ยังไม่มี Global Challenge ที่เปิดรับสมัคร</Text>
-          </View>
+          <EmptyState
+            emoji="🌍"
+            title="ยังไม่มี Global Challenge ที่เปิดรับสมัคร"
+            subtitle="อยากให้มี Challenge แบบไหน ส่งไอเดียมาบอกเราได้เลยด้านล่าง"
+          />
         ) : null
       }
       ListFooterComponent={
-        <View style={styles.inviteCard}>
+        <Card style={styles.inviteCard}>
           <Text style={styles.inviteTitle}>
             ถ้าคุณคือองค์กร ผู้สนใจ หรือคนหนึ่งคนที่อยากเปลี่ยนโลก{"\n"}ส่งความคิดของคุณมาบอกเราสิ?
           </Text>
           <Text style={styles.inviteSub}>
             Global Challenge เกิดจากไอเดียของคนที่อยากเห็นอะไรบางอย่างดีขึ้น — เล่าให้เราฟังได้เลย
           </Text>
-          <Pressable style={styles.inviteButton} onPress={handleContact}>
-            <Text style={styles.inviteButtonText}>✉️ ส่งไอเดียมาหาเรา</Text>
-          </Pressable>
+          <PrimaryButton
+            label="✉️ ส่งไอเดียมาหาเรา"
+            onPress={handleContact}
+            color={colors.accent}
+            style={styles.inviteButton}
+          />
           <Text style={styles.inviteEmail}>{CONTACT_EMAIL}</Text>
-        </View>
+        </Card>
       }
       renderItem={({ item }) => (
-        <Pressable
+        <Card
           style={styles.card}
           onPress={() => navigation.navigate("GlobalChallengeDetail", { globalChallengeId: item.id })}
         >
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardMeta}>{item.goal_description}</Text>
-          <Text style={styles.cardReward}>🎁 {item.reward_text}</Text>
+          <View style={styles.cardHead}>
+            <Text style={styles.cardGlyph}>🌍</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardMeta} numberOfLines={2}>
+                {item.goal_description}
+              </Text>
+            </View>
+          </View>
+          {item.reward_text ? <Text style={styles.cardReward}>🎁 {item.reward_text}</Text> : null}
           {item.has_limited_daruma ? (
             <Text style={styles.cardBadge}>
               🍃 ใบไม้พิเศษ (Limited) {item.limited_daruma_claimed}/{item.limited_daruma_total}
             </Text>
           ) : null}
-        </Pressable>
+        </Card>
       )}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, gap: 12 },
-  card: { backgroundColor: "#f7f7f8", borderRadius: 12, padding: 16, gap: 4 },
-  cardTitle: { fontSize: 16, fontWeight: "700" },
-  cardMeta: { color: "#555" },
-  cardReward: { color: "#b45309", marginTop: 4 },
-  cardBadge: { color: "#e11d48", marginTop: 2 },
-  emptyState: { alignItems: "center", marginTop: 60 },
-  emptyTitle: { color: "#888" },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
+  header: { fontSize: font.h1, fontWeight: "800", color: colors.text },
+  subheader: { fontSize: font.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.lg },
+
+  heroCard: { alignItems: "center", paddingVertical: spacing.xl },
+  heroText: {
+    fontSize: font.body,
+    fontWeight: "700",
+    color: colors.primaryDark,
+    textAlign: "center",
+    lineHeight: 24,
+    marginTop: spacing.md,
+  },
+  statRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg, alignSelf: "stretch" },
+
+  card: { gap: spacing.sm },
+  cardHead: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
+  cardGlyph: { fontSize: 26 },
+  cardTitle: { fontSize: font.h3, fontWeight: "700", color: colors.text },
+  cardMeta: { color: colors.textMuted, marginTop: 3, fontSize: font.small, lineHeight: 20 },
+  cardReward: { color: colors.amber, fontSize: font.small, fontWeight: "600" },
+  cardBadge: { color: colors.accent, fontSize: font.small, fontWeight: "600" },
+
   inviteCard: {
-    marginTop: 20,
-    backgroundColor: "#fdf3ee",
-    borderRadius: 14,
-    padding: 20,
+    marginTop: spacing.xl,
+    backgroundColor: colors.accentSoft,
+    borderColor: "#f7cdd5",
     alignItems: "center",
-    gap: 8,
+    paddingVertical: spacing.xl,
   },
-  inviteTitle: { fontSize: 16, fontWeight: "700", textAlign: "center", lineHeight: 24, color: "#26170f" },
-  inviteSub: { fontSize: 13, color: "#8a7264", textAlign: "center", lineHeight: 19 },
-  inviteButton: {
-    marginTop: 8,
-    backgroundColor: "#d61f3f",
-    borderRadius: 10,
-    paddingVertical: 13,
-    paddingHorizontal: 26,
-    alignSelf: "stretch",
+  inviteTitle: {
+    fontSize: font.h3,
+    fontWeight: "800",
+    textAlign: "center",
+    lineHeight: 26,
+    color: colors.text,
   },
-  inviteButtonText: { color: "white", fontWeight: "700", textAlign: "center", fontSize: 15 },
-  inviteEmail: { fontSize: 12, color: "#a1897a", marginTop: 2 },
+  inviteSub: {
+    fontSize: font.small,
+    color: colors.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
+    marginTop: spacing.sm,
+  },
+  inviteButton: { alignSelf: "stretch", marginTop: spacing.lg, borderRadius: radius.md },
+  inviteEmail: { fontSize: font.tiny, color: colors.textFaint, marginTop: spacing.md },
 });

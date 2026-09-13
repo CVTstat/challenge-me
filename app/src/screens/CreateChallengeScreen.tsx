@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { showAlert } from "@/lib/alert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -18,6 +19,8 @@ import {
 } from "@/lib/measurement";
 import { CHALLENGE_CATEGORIES } from "@/lib/categories";
 import CategoryPicker from "@/components/CategoryPicker";
+import { PrimaryButton } from "@/components/ui";
+import { colors, font, radius, shadow, spacing } from "@/theme";
 import type { ChallengeType, MeasurementType } from "@/types/database";
 
 const MEASUREMENT_OPTIONS: { value: MeasurementType; label: string }[] = [
@@ -36,6 +39,7 @@ type FriendRow = { id: string; display_name: string; avatar_url: string | null }
 export default function CreateChallengeScreen() {
   const { session } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
 
   const [type, setType] = useState<ChallengeType>("PERSONAL");
   const [title, setTitle] = useState("");
@@ -192,8 +196,9 @@ export default function CreateChallengeScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md }]}>
       <Text style={styles.heading}>สร้าง Challenge ใหม่</Text>
+      <Text style={styles.subheading}>ตั้งเป้าหมายในแบบของคุณ แล้วเริ่มลงมือวันนี้</Text>
 
       <View style={styles.optionRow}>
         <Pressable
@@ -359,47 +364,83 @@ export default function CreateChallengeScreen() {
         )}
       </View>
 
-      <Pressable style={styles.primaryButton} onPress={handleSubmit} disabled={submitting}>
-        <Text style={styles.primaryButtonText}>{submitting ? "กำลังสร้าง..." : "สร้าง Challenge"}</Text>
-      </Pressable>
+      <PrimaryButton
+        label={submitting ? "กำลังสร้าง..." : "🎯 สร้าง Challenge"}
+        onPress={handleSubmit}
+        disabled={submitting}
+        color={colors.accent}
+        style={styles.submitButton}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 8 },
-  heading: { fontSize: 20, fontWeight: "700", marginBottom: 8 },
-  label: { fontWeight: "600", marginTop: 12 },
-  helper: { color: "#8a9484", fontSize: 12, marginTop: 6, lineHeight: 18 },
-  targetRow: { flexDirection: "row", gap: 8 },
-  inviteSection: { marginTop: 20, borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 8 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
-  chipSelected: { backgroundColor: "#2e7d32", borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },
-  chipSelectedText: { color: "white", fontWeight: "600", fontSize: 13 },
-  friendResults: { marginTop: 8 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  container: { paddingHorizontal: spacing.lg, paddingBottom: 40, gap: 6 },
+  heading: { fontSize: font.h1, fontWeight: "800", color: colors.text },
+  subheading: { fontSize: font.small, color: colors.textMuted, marginBottom: spacing.md },
+  label: { fontWeight: "700", marginTop: spacing.lg, color: colors.text, fontSize: font.body },
+  helper: { color: colors.textFaint, fontSize: font.tiny, marginTop: 6, lineHeight: 18 },
+  targetRow: { flexDirection: "row", gap: spacing.sm },
+
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: 13,
+    fontSize: font.body,
+    color: colors.text,
+    marginTop: 6,
+  },
+  unitInput: { width: 92 },
+
+  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: 6 },
+  optionChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.pill,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+  },
+  optionChipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  optionText: { color: colors.textMuted, fontWeight: "600", fontSize: font.small },
+  optionTextActive: { color: colors.onPrimary, fontWeight: "700", fontSize: font.small },
+
+  milestoneRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
+  milestoneIndex: { fontWeight: "700", width: 20, color: colors.textMuted },
+  removeMilestone: { color: colors.accent, fontWeight: "600" },
+  addMilestoneButton: { marginTop: spacing.md },
+  addMilestoneText: { color: colors.accent, fontWeight: "700" },
+
+  inviteSection: {
+    marginTop: spacing.xxl,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.md },
+  chipSelected: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  chipSelectedText: { color: colors.onPrimary, fontWeight: "700", fontSize: font.small },
+  friendResults: { marginTop: spacing.sm },
   friendRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: colors.border,
   },
-  friendName: { fontSize: 15, fontWeight: "600" },
-  friendPick: { color: "#2e7d32", fontWeight: "700", fontSize: 13 },
-  friendPicked: { color: "#8a9484", fontWeight: "700", fontSize: 13 },
-  unitInput: { width: 90 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 15 },
-  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  optionChip: { borderWidth: 1, borderColor: "#ddd", borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14 },
-  optionChipActive: { backgroundColor: "#e11d48", borderColor: "#e11d48" },
-  optionText: { color: "#333" },
-  optionTextActive: { color: "white", fontWeight: "600" },
-  milestoneRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
-  milestoneIndex: { fontWeight: "600", width: 20 },
-  removeMilestone: { color: "#e11d48" },
-  addMilestoneButton: { marginTop: 8 },
-  addMilestoneText: { color: "#e11d48", fontWeight: "600" },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 14, marginTop: 24, marginBottom: 40 },
-  primaryButtonText: { color: "white", textAlign: "center", fontWeight: "600", fontSize: 16 },
+  friendName: { fontSize: font.body, fontWeight: "600", color: colors.text },
+  friendPick: { color: colors.primary, fontWeight: "700", fontSize: font.small },
+  friendPicked: { color: colors.textFaint, fontWeight: "700", fontSize: font.small },
+
+  submitButton: { marginTop: spacing.xxl, ...shadow.float },
 });

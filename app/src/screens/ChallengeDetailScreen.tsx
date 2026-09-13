@@ -12,6 +12,8 @@ import { startGrowing, earnLeaf, deleteChallenge, setChallengeTarget, submitChec
 import { completeMilestone, computeJourneyProgressPct, listMilestones } from "@/api/lifeChallenge";
 import { getChallengeProgress } from "@/api/progress";
 import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
+import { ProgressRing, StatTile } from "@/components/ui";
+import { colors, font, radius, shadow, spacing } from "@/theme";
 import {
   checkInLabel,
   isAccumulative,
@@ -276,7 +278,7 @@ export default function ChallengeDetailScreen() {
   if (loading || !challenge || !growth) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -309,15 +311,14 @@ export default function ChallengeDetailScreen() {
     challenge.type === "LIFE" ? allMilestonesDone : target !== null && doneCount >= target;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.darumaBox}>
-        <DarumaCanvas eyes={darumaEyes} width={140} />
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+      <View style={styles.heroCard}>
+        <DarumaCanvas eyes={darumaEyes} width={122} />
         <Text style={styles.darumaCaption}>{darumaCaption}</Text>
+        <Text style={styles.title}>{challenge.title}</Text>
+        <Text style={styles.goal}>{challenge.goal_description}</Text>
+        {challenge.reward_text ? <Text style={styles.reward}>🎁 {challenge.reward_text}</Text> : null}
       </View>
-
-      <Text style={styles.title}>{challenge.title}</Text>
-      <Text style={styles.goal}>{challenge.goal_description}</Text>
-      {challenge.reward_text ? <Text style={styles.reward}>🎁 {challenge.reward_text}</Text> : null}
 
       {/* Flow 10 / FR12: NEEDS_PUSH banner — non-owner เห็นปุ่ม Push */}
       {challenge.status === "NEEDS_PUSH" && (
@@ -387,20 +388,33 @@ export default function ChallengeDetailScreen() {
       {/* Flow 9 / FR9: Progress — เฉพาะ Challenge ที่มี attempt แล้ว */}
       {progress && challenge.type === "PERSONAL" && (
         <View style={styles.progressBox}>
-          <Text style={styles.progressLine}>
-            🔥 Streak ปัจจุบัน {progress.currentStreak} · ดีที่สุด {progress.bestStreak}
-          </Text>
-          <Text style={styles.progressLine}>✓ Check-in ทั้งหมด {progress.totalCheckIns} ครั้ง</Text>
+          {/* วงแหวนความคืบหน้า — เห็นภาพรวมได้ในแวบเดียวว่าใกล้เส้นชัยแค่ไหน */}
           {target !== null && (
-            <>
-              <Text style={styles.progressLine}>
-                🎯 {progressSummaryText(challenge.measurement_type, unit, doneCount, target)} ({targetPct}%)
-              </Text>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { flex: targetPct }]} />
-                <View style={{ flex: 100 - targetPct }} />
-              </View>
-            </>
+            <View style={styles.ringRow}>
+              <ProgressRing value={targetPct / 100} size={158} strokeWidth={14}>
+                <Text style={styles.ringPct}>{targetPct}%</Text>
+                <Text style={styles.ringSub}>
+                  {+doneCount.toFixed(1)} / {target} {unit || "ครั้ง"}
+                </Text>
+              </ProgressRing>
+            </View>
+          )}
+
+          <View style={styles.statRow}>
+            <StatTile emoji="📅" value={progress.totalCheckIns} label="ครั้งที่ทำได้" color={colors.primary} />
+            <StatTile emoji="🔥" value={progress.currentStreak} label="ติดต่อกัน" color={colors.amber} />
+            <StatTile
+              emoji="🎯"
+              value={remaining !== null ? +remaining.toFixed(1) : "—"}
+              label={unit ? `เหลืออีก (${unit})` : "เหลืออีก"}
+              color={colors.accent}
+            />
+          </View>
+
+          {target !== null && (
+            <Text style={styles.progressLine}>
+              {progressSummaryText(challenge.measurement_type, unit, doneCount, target)}
+            </Text>
           )}
         </View>
       )}
@@ -587,69 +601,167 @@ export default function ChallengeDetailScreen() {
   );
 }
 
+// การ์ดสีขาวมุมมนเงาบาง ๆ ใช้ซ้ำหลายที่ในหน้านี้
+const cardBase = {
+  backgroundColor: colors.card,
+  borderRadius: radius.lg,
+  borderWidth: 1,
+  borderColor: colors.border,
+  padding: spacing.lg,
+  ...shadow.card,
+} as const;
+
 const styles = StyleSheet.create({
-  container: { padding: 20, gap: 8 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  darumaBox: { alignItems: "center", marginBottom: 8 },
-  darumaCaption: { fontSize: 13, color: "#8a7f76", marginTop: 6, textAlign: "center" },
-  title: { fontSize: 24, fontWeight: "700", marginTop: 4 },
-  goal: { fontSize: 15, color: "#555", marginTop: 4 },
-  reward: { fontSize: 14, color: "#b45309", marginTop: 8 },
-  warnBanner: { marginTop: 16, backgroundColor: "#fef2f2", borderRadius: 12, padding: 14, gap: 8 },
-  warnText: { color: "#b91c1c", fontWeight: "600" },
-  rescueBanner: { marginTop: 16, backgroundColor: "#eff6ff", borderRadius: 12, padding: 14, gap: 8 },
-  rescueText: { color: "#1d4ed8", fontWeight: "600" },
-  pushButton: { backgroundColor: "#e11d48", borderRadius: 8, paddingVertical: 10, alignItems: "center" },
-  pushButtonText: { color: "white", fontWeight: "700" },
-  notYetBanner: { marginTop: 16, backgroundColor: "#fff7ed", borderRadius: 12, padding: 14, gap: 10 },
-  notYetText: { fontWeight: "600" },
-  notYetRow: { flexDirection: "row", gap: 8 },
-  goalInput: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, backgroundColor: "white" },
-  progressBox: { marginTop: 16, backgroundColor: "#f7f7f8", borderRadius: 12, padding: 14, gap: 4 },
-  progressLine: { fontSize: 14, color: "#333" },
-  milestoneSection: { marginTop: 16 },
-  sectionTitle: { fontWeight: "700", marginBottom: 8 },
-  milestoneRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  container: { padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
+
+  // ── หัวหน้า: ดารุมะ + ชื่อเป้าหมาย ──────────────────────────────────────
+  heroCard: { ...cardBase, alignItems: "center", paddingVertical: spacing.xl },
+  darumaCaption: { fontSize: font.small, color: colors.textMuted, marginTop: spacing.sm, textAlign: "center" },
+  title: { fontSize: font.h2, fontWeight: "800", color: colors.text, marginTop: spacing.md, textAlign: "center" },
+  goal: { fontSize: font.body, color: colors.textMuted, marginTop: 6, textAlign: "center", lineHeight: 22 },
+  reward: {
+    fontSize: font.small,
+    color: colors.amber,
+    marginTop: spacing.md,
+    backgroundColor: colors.amberSoft,
+    borderRadius: radius.pill,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    overflow: "hidden",
+    fontWeight: "600",
+  },
+
+  // ── แบนเนอร์สถานะ ──────────────────────────────────────────────────────
+  warnBanner: { ...cardBase, backgroundColor: colors.accentSoft, borderColor: "#f7cdd5", gap: spacing.sm },
+  warnText: { color: colors.accentDark, fontWeight: "700" },
+  rescueBanner: { ...cardBase, backgroundColor: "#eef4ff", borderColor: "#cfdcf7", gap: spacing.sm },
+  rescueText: { color: "#1d4ed8", fontWeight: "700" },
+  pushButton: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: 12, alignItems: "center" },
+  pushButtonText: { color: colors.onPrimary, fontWeight: "700" },
+  notYetBanner: { ...cardBase, backgroundColor: colors.amberSoft, borderColor: "#f5e0b5", gap: spacing.md },
+  notYetText: { fontWeight: "700", color: colors.text },
+  notYetRow: { flexDirection: "row", gap: spacing.sm },
+  goalInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 13,
+    backgroundColor: colors.card,
+    color: colors.text,
+  },
+
+  // ── ความคืบหน้า ────────────────────────────────────────────────────────
+  progressBox: { ...cardBase, gap: spacing.md },
+  ringRow: { alignItems: "center", paddingVertical: spacing.sm },
+  ringPct: { fontSize: 30, fontWeight: "800", color: colors.text },
+  ringSub: { fontSize: font.small, color: colors.textMuted, marginTop: 2 },
+  statRow: { flexDirection: "row", gap: spacing.sm },
+  progressLine: { fontSize: font.small, color: colors.textMuted, textAlign: "center" },
+
+  // ── Life Challenge: Milestones ─────────────────────────────────────────
+  milestoneSection: { ...cardBase },
+  sectionTitle: { fontWeight: "700", marginBottom: spacing.sm, color: colors.text, fontSize: font.h3 },
+  milestoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 9,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   milestoneStatus: { fontSize: 16 },
-  milestoneTitle: { flex: 1, fontSize: 15 },
-  milestoneComplete: { color: "#e11d48", fontWeight: "600" },
-  ritualBox: { marginTop: 24, alignItems: "center", gap: 12 },
-  ritualText: { textAlign: "center", color: "#555", lineHeight: 22 },
-  // ปุ่มที่เกี่ยวกับการปลูก/ใบไม้ใช้สีเขียว (โต/สำเร็จ) ส่วนสีแดงเดิมยังเป็น
-  // สีของการลงมือทำประจำวัน เช่น check-in — แยกความหมายกันชัด ๆ
-  ritualButton: { backgroundColor: "#d61f3f", borderRadius: 8, padding: 14, alignSelf: "stretch" },
-  leafButton: { borderWidth: 1, borderColor: "#2e7d32", backgroundColor: "#f4f8f1", borderRadius: 8, padding: 12 },
-  leafButtonText: { color: "#2e7d32", textAlign: "center", fontWeight: "700" },
-  checkInBox: { gap: 8 },
-  checkInLabel: { fontWeight: "600", color: "#333" },
-  checkInRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  checkInInput: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, backgroundColor: "white", fontSize: 16 },
-  checkInUnit: { fontSize: 15, color: "#666", fontWeight: "600" },
-  // แถบความคืบหน้าเทียบกับเส้นชัย
-  barTrack: { flexDirection: "row", height: 8, borderRadius: 999, backgroundColor: "#e6e6e6", overflow: "hidden", marginTop: 6 },
-  barFill: { backgroundColor: "#2e7d32", borderRadius: 999 },
-  // กล่องตอนยังทำไม่ครบ (ปุ่มรับใบไม้ยังไม่ขึ้น)
-  lockedBox: { backgroundColor: "#f6f6f4", borderRadius: 10, padding: 14, gap: 6 },
-  lockedText: { fontWeight: "700", color: "#6b6b66", textAlign: "center" },
-  lockedSub: { fontSize: 12, color: "#95958e", textAlign: "center", lineHeight: 18 },
-  targetRow: { flexDirection: "row", gap: 8, marginTop: 6 },
-  targetInput: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 10, backgroundColor: "white" },
-  targetButton: { backgroundColor: "#2e7d32", borderRadius: 8, paddingHorizontal: 16, justifyContent: "center" },
-  targetButtonText: { color: "white", fontWeight: "700" },
-  // กล่องตอนปลดล็อกแล้ว
-  unlockedBox: { backgroundColor: "#eef6ea", borderRadius: 10, padding: 14, gap: 10 },
-  unlockedText: { fontWeight: "700", color: "#2e7d32", textAlign: "center" },
-  section: { marginTop: 24, gap: 12 },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 14 },
-  primaryButtonText: { color: "white", textAlign: "center", fontWeight: "700", fontSize: 16 },
-  secondaryButton: { borderWidth: 1, borderColor: "#e11d48", borderRadius: 8, padding: 12 },
-  notYetButton: { flex: 1 },
-  secondaryButtonText: { color: "#e11d48", textAlign: "center", fontWeight: "600" },
-  completedBox: { marginTop: 24, backgroundColor: "#f4f8f1", borderRadius: 12, padding: 20, alignItems: "center" },
-  completedText: { textAlign: "center", fontWeight: "600", color: "#2e7d32", lineHeight: 22 },
-  linksSection: { marginTop: 32, gap: 10, paddingBottom: 20 },
-  linkButton: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
-  linkButtonText: { textAlign: "center", fontWeight: "600", color: "#333" },
-  deleteButton: { marginTop: 18, padding: 12 },
-  deleteButtonText: { textAlign: "center", fontWeight: "600", color: "#b0b0aa", fontSize: 13 },
+  milestoneTitle: { flex: 1, fontSize: font.body, color: colors.text },
+  milestoneComplete: { color: colors.primary, fontWeight: "700", fontSize: font.small },
+
+  // ── พิธีเติมตาข้างแรก ──────────────────────────────────────────────────
+  ritualBox: { ...cardBase, alignItems: "center", gap: spacing.md, paddingVertical: spacing.xl },
+  ritualText: { textAlign: "center", color: colors.textMuted, lineHeight: 22, fontSize: font.body },
+  // สีแดง = ดารุมะ/คำมั่น · สีเขียว = การเติบโต/ใบไม้ — แยกความหมายกันชัด ๆ
+  ritualButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: 15,
+    alignSelf: "stretch",
+    ...shadow.card,
+  },
+  leafButton: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 14, ...shadow.card },
+  leafButtonText: { color: colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: font.body },
+
+  // ── Check-in ───────────────────────────────────────────────────────────
+  checkInBox: { ...cardBase, gap: spacing.md },
+  checkInLabel: { fontWeight: "700", color: colors.text, fontSize: font.body },
+  checkInRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  checkInInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 13,
+    backgroundColor: colors.cardSoft,
+    fontSize: font.h3,
+    color: colors.text,
+  },
+  checkInUnit: { fontSize: font.body, color: colors.textMuted, fontWeight: "700" },
+
+  // ── กล่องตอนยังทำไม่ครบ (ปุ่มรับใบไม้ยังไม่ขึ้น) ───────────────────────
+  lockedBox: { ...cardBase, backgroundColor: colors.cardSoft, gap: 6 },
+  lockedText: { fontWeight: "700", color: colors.textMuted, textAlign: "center", fontSize: font.body },
+  lockedSub: { fontSize: font.tiny, color: colors.textFaint, textAlign: "center", lineHeight: 18 },
+  targetRow: { flexDirection: "row", gap: spacing.sm, marginTop: 6 },
+  targetInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 11,
+    backgroundColor: colors.card,
+    color: colors.text,
+  },
+  targetButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingHorizontal: 18,
+    justifyContent: "center",
+  },
+  targetButtonText: { color: colors.onPrimary, fontWeight: "700" },
+
+  // ── กล่องตอนปลดล็อกแล้ว ────────────────────────────────────────────────
+  unlockedBox: { ...cardBase, backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder, gap: spacing.md },
+  unlockedText: { fontWeight: "800", color: colors.primaryDark, textAlign: "center", fontSize: font.body },
+
+  section: { gap: spacing.md },
+  primaryButton: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 15, ...shadow.card },
+  primaryButtonText: { color: colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: font.body },
+  secondaryButton: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingVertical: 13,
+  },
+  notYetButton: { flex: 1, borderColor: colors.amber },
+  secondaryButtonText: { color: colors.text, textAlign: "center", fontWeight: "700", fontSize: font.small },
+
+  completedBox: {
+    ...cardBase,
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primaryBorder,
+    alignItems: "center",
+    paddingVertical: spacing.xl,
+  },
+  completedText: { textAlign: "center", fontWeight: "700", color: colors.primaryDark, lineHeight: 23 },
+
+  linksSection: { marginTop: spacing.sm, gap: spacing.sm },
+  linkButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+  },
+  linkButtonText: { textAlign: "center", fontWeight: "700", color: colors.text, fontSize: font.small },
+  deleteButton: { marginTop: spacing.md, padding: spacing.md },
+  deleteButtonText: { textAlign: "center", fontWeight: "600", color: colors.textFaint, fontSize: font.small },
 });

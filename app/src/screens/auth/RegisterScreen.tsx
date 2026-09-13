@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from "react-native";
 import { showAlert } from "@/lib/alert";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
+import DarumaCanvas from "@/components/DarumaCanvas";
+import { PrimaryButton } from "@/components/ui";
+import { colors, font, radius, spacing } from "@/theme";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
 
@@ -33,42 +36,69 @@ export default function RegisterScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+      <View style={styles.mascot}>
+        <DarumaCanvas eyes={0} width={96} />
+      </View>
       <Text style={styles.title}>สร้างบัญชี Challenge Me</Text>
+      <Text style={styles.subtitle}>ดารุมะของคุณรออยู่ — อีกไม่กี่ขั้นก็เริ่มได้เลย</Text>
 
-      <TextInput style={styles.input} placeholder="ชื่อที่แสดง" value={displayName} onChangeText={setDisplayName} />
-      <TextInput
-        style={styles.input}
-        placeholder="อีเมล"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="ชื่อที่แสดง"
+          placeholderTextColor={colors.textFaint}
+          value={displayName}
+          onChangeText={setDisplayName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="อีเมล"
+          placeholderTextColor={colors.textFaint}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)"
+          placeholderTextColor={colors.textFaint}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      <Pressable style={styles.primaryButton} onPress={handleRegister} disabled={submitting}>
-        <Text style={styles.primaryButtonText}>{submitting ? "กำลังสมัคร..." : "สมัครสมาชิก"}</Text>
-      </Pressable>
+        <PrimaryButton
+          label={submitting ? "กำลังสมัคร..." : "สมัครสมาชิก"}
+          onPress={handleRegister}
+          disabled={submitting}
+          style={{ marginTop: spacing.xs }}
+        />
+      </View>
 
-      <Pressable onPress={() => navigation.navigate("Login")}>
+      <Pressable onPress={() => navigation.navigate("Login")} hitSlop={8}>
         <Text style={styles.link}>มีบัญชีอยู่แล้ว? เข้าสู่ระบบ</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, gap: 12 },
-  title: { fontSize: 24, fontWeight: "700", textAlign: "center", marginBottom: 16 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16 },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 14, marginTop: 8 },
-  primaryButtonText: { color: "white", textAlign: "center", fontWeight: "600", fontSize: 16 },
-  link: { textAlign: "center", marginTop: 16, color: "#e11d48" },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  container: { flexGrow: 1, justifyContent: "center", alignItems: "center", padding: spacing.xl, paddingVertical: 40 },
+  mascot: { marginBottom: spacing.md },
+  title: { fontSize: font.h2, fontWeight: "800", color: colors.text, textAlign: "center" },
+  subtitle: { fontSize: font.small, color: colors.textMuted, marginTop: 4, marginBottom: spacing.xl },
+  form: { alignSelf: "stretch", gap: spacing.md, maxWidth: 420, width: "100%" },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: 14,
+    fontSize: font.body,
+    color: colors.text,
+  },
+  link: { marginTop: spacing.xl, color: colors.primaryDark, fontWeight: "600", fontSize: font.small },
 });

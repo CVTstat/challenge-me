@@ -114,7 +114,7 @@ export default function ManageSupportersScreen() {
                   <Text style={styles.action}>ปิดเสียง</Text>
                 </Pressable>
                 <Pressable onPress={() => handleRemove(item.id)}>
-                  <Text style={[styles.action, { color: "#e11d48" }]}>ลบ</Text>
+                  <Text style={[styles.action, { color: "#e8415a" }]}>ลบ</Text>
                 </Pressable>
               </>
             )}
@@ -129,12 +129,12 @@ export default function ManageSupportersScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   label: { fontWeight: "600", marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 10 },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, paddingHorizontal: 16, justifyContent: "center" },
+  input: { borderWidth: 1, borderColor: "#e7ede8", borderRadius: 8, padding: 10 },
+  primaryButton: { backgroundColor: "#e8415a", borderRadius: 8, paddingHorizontal: 16, justifyContent: "center" },
   primaryButtonText: { color: "white", fontWeight: "600" },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: "#eee" },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: "#e7ede8" },
   name: { fontWeight: "600" },
-  status: { color: "#888", fontSize: 13 },
-  action: { color: "#555", fontWeight: "600" },
-  empty: { color: "#888", textAlign: "center", marginTop: 24 },
+  status: { color: "#6b7f70", fontSize: 13 },
+  action: { color: "#6b7f70", fontWeight: "600" },
+  empty: { color: "#6b7f70", textAlign: "center", marginTop: 24 },
 });

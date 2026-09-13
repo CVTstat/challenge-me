@@ -5,7 +5,10 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/providers/AuthProvider";
+import { Card, EmptyState, SectionTitle } from "@/components/ui";
+import { colors, font, radius, spacing } from "@/theme";
 import { listOpenCommunityHelpRequests } from "@/api/community";
 import {
   listChallengesImSupporting,
@@ -27,6 +30,7 @@ type ChallengeInviteWithMeta = ChallengeInviteRow & {
 export default function CommunityScreen() {
   const { session } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const [requests, setRequests] = useState<HelpRequestRow[]>([]);
   const [supporting, setSupporting] = useState<SupportingRow[]>([]);
   const [invites, setInvites] = useState<InviteRow[]>([]);
@@ -76,124 +80,162 @@ export default function CommunityScreen() {
 
   return (
     <FlatList
-      contentContainerStyle={styles.list}
+      style={styles.screen}
+      contentContainerStyle={[styles.list, { paddingTop: insets.top + spacing.md }]}
       data={requests}
       keyExtractor={(item) => item.id}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.primary} />}
       ListHeaderComponent={
         <View>
           <Text style={styles.header}>❤️ Community</Text>
+          <Text style={styles.subheader}>ที่ที่ไม่มีใครต้องสู้อยู่คนเดียว</Text>
 
           {challengeInvites.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🎯 คำท้าที่ได้รับ</Text>
+            <View>
+              <SectionTitle>🎯 คำท้าที่ได้รับ</SectionTitle>
               {challengeInvites.map((inv) => (
-                <View key={inv.id} style={styles.challengeInviteRow}>
+                <Card key={inv.id} style={styles.challengeInviteCard}>
                   <Text style={styles.inviteTitle}>
-                    {inv.inviter?.display_name ?? "เพื่อน"} ท้าให้ทำ "{inv.challenges?.title ?? "-"}"
+                    {inv.inviter?.display_name ?? "เพื่อน"} ท้าให้ทำ “{inv.challenges?.title ?? "-"}”
                   </Text>
                   {inv.message ? <Text style={styles.inviteMessage}>“{inv.message}”</Text> : null}
-                  <View style={{ flexDirection: "row", gap: 12, marginTop: 6 }}>
-                    <Pressable onPress={() => handleRespondChallengeInvite(inv.id, true)}>
-                      <Text style={styles.acceptText}>🔥 รับคำท้า</Text>
+                  <View style={styles.actionRow}>
+                    <Pressable
+                      style={styles.acceptButton}
+                      onPress={() => handleRespondChallengeInvite(inv.id, true)}
+                    >
+                      <Text style={styles.acceptButtonText}>🔥 รับคำท้า</Text>
                     </Pressable>
-                    <Pressable onPress={() => handleRespondChallengeInvite(inv.id, false)}>
-                      <Text style={styles.declineText}>ปฏิเสธ</Text>
+                    <Pressable
+                      style={styles.declineButton}
+                      onPress={() => handleRespondChallengeInvite(inv.id, false)}
+                    >
+                      <Text style={styles.declineButtonText}>ไว้ก่อน</Text>
                     </Pressable>
                   </View>
-                </View>
+                </Card>
               ))}
             </View>
           )}
 
           {invites.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📬 คำเชิญเป็น Supporter</Text>
+            <View>
+              <SectionTitle>📬 คำเชิญเป็น Supporter</SectionTitle>
               {invites.map((inv) => (
-                <View key={inv.id} style={styles.inviteRow}>
+                <Card key={inv.id} style={styles.inviteCard}>
                   <Text style={styles.inviteTitle}>{inv.challenges?.title ?? "-"}</Text>
-                  <View style={{ flexDirection: "row", gap: 12 }}>
-                    <Pressable onPress={() => handleRespond(inv.id, true)}>
-                      <Text style={styles.acceptText}>ตอบรับ</Text>
+                  <View style={styles.actionRow}>
+                    <Pressable style={styles.acceptButton} onPress={() => handleRespond(inv.id, true)}>
+                      <Text style={styles.acceptButtonText}>ตอบรับ</Text>
                     </Pressable>
-                    <Pressable onPress={() => handleRespond(inv.id, false)}>
-                      <Text style={styles.declineText}>ปฏิเสธ</Text>
+                    <Pressable style={styles.declineButton} onPress={() => handleRespond(inv.id, false)}>
+                      <Text style={styles.declineButtonText}>ปฏิเสธ</Text>
                     </Pressable>
                   </View>
-                </View>
+                </Card>
               ))}
             </View>
           )}
 
           {supporting.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>👥 คนที่ฉันกำลังซัพพอร์ต</Text>
+            <View>
+              <SectionTitle>👥 คนที่ฉันกำลังซัพพอร์ต</SectionTitle>
               {supporting.map((s) =>
                 s.challenges ? (
-                  <Pressable
+                  <Card
                     key={s.id}
-                    style={styles.supportRow}
+                    style={styles.supportCard}
                     onPress={() => navigation.navigate("ChallengeDetail", { challengeId: s.challenges!.id })}
                   >
                     <Text style={styles.supportTitle}>{s.challenges.title}</Text>
                     <Text style={styles.supportStatus}>{s.challenges.status}</Text>
-                  </Pressable>
+                  </Card>
                 ) : null
               )}
             </View>
           )}
 
-          <Text style={styles.sectionTitle}>🧭 Ask Community</Text>
+          <SectionTitle>🧭 ถามชุมชน</SectionTitle>
         </View>
       }
-      ListEmptyComponent={!loading ? <Text style={styles.empty}>ยังไม่มีคำถามที่เปิดอยู่</Text> : null}
+      ListEmptyComponent={
+        !loading ? (
+          <EmptyState
+            emoji="💬"
+            title="ยังไม่มีคำถามที่เปิดอยู่"
+            subtitle="ถ้าคุณติดอะไรอยู่ ลองโพสต์ถามจากหน้า Challenge ของคุณได้เลย"
+          />
+        ) : null
+      }
       renderItem={({ item }) => (
-        <Pressable
-          style={styles.card}
+        <Card
+          style={styles.helpCard}
           onPress={() => navigation.navigate("HelpRequestDetail", { helpRequestId: item.id })}
         >
           <Text style={styles.body}>{item.body}</Text>
-          <Text style={styles.cardMeta}>{item.status === "OPEN" ? "รอคำตอบ" : "มีคำตอบแล้ว"}</Text>
-        </Pressable>
+          <View style={styles.helpMetaRow}>
+            <Text style={[styles.badge, item.status === "OPEN" ? styles.badgeOpen : styles.badgeAnswered]}>
+              {item.status === "OPEN" ? "รอคำตอบ" : "มีคำตอบแล้ว"}
+            </Text>
+            <Text style={styles.helpCta}>ไปช่วยตอบ ›</Text>
+          </View>
+        </Card>
       )}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, gap: 12 },
-  header: { fontSize: 20, fontWeight: "700", marginBottom: 8 },
-  section: { marginBottom: 20, gap: 8 },
-  sectionTitle: { fontWeight: "700", marginBottom: 4 },
-  inviteRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  screen: { flex: 1, backgroundColor: colors.bg },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
+  header: { fontSize: font.h1, fontWeight: "800", color: colors.text },
+  subheader: { fontSize: font.small, color: colors.textMuted, marginTop: 2 },
+
+  challengeInviteCard: {
+    backgroundColor: colors.accentSoft,
+    borderColor: "#f7cdd5",
+    marginBottom: spacing.sm,
+  },
+  inviteCard: { backgroundColor: colors.amberSoft, borderColor: "#f5e0b5", marginBottom: spacing.sm },
+  inviteTitle: { fontWeight: "700", color: colors.text, fontSize: font.body, lineHeight: 22 },
+  inviteMessage: { color: colors.textMuted, fontStyle: "italic", marginTop: 6, fontSize: font.small },
+
+  actionRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 11,
     alignItems: "center",
-    backgroundColor: "#fff7ed",
-    borderRadius: 10,
-    padding: 12,
   },
-  challengeInviteRow: {
-    backgroundColor: "#fef2f2",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+  acceptButtonText: { color: colors.onPrimary, fontWeight: "700", fontSize: font.small },
+  declineButton: {
+    borderRadius: radius.md,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  inviteMessage: { color: "#666", fontStyle: "italic", marginTop: 4, fontSize: 13 },
-  inviteTitle: { flex: 1, fontWeight: "600" },
-  acceptText: { color: "#16a34a", fontWeight: "600" },
-  declineText: { color: "#e11d48", fontWeight: "600" },
-  supportRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#f7f7f8",
-    borderRadius: 10,
-    padding: 12,
+  declineButtonText: { color: colors.textMuted, fontWeight: "700", fontSize: font.small },
+
+  supportCard: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.sm },
+  supportTitle: { fontWeight: "700", color: colors.text },
+  supportStatus: { color: colors.textFaint, fontSize: font.small },
+
+  helpCard: { gap: spacing.sm },
+  body: { fontSize: font.body, color: colors.text, lineHeight: 22 },
+  helpMetaRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  badge: {
+    fontSize: font.tiny,
+    fontWeight: "700",
+    borderRadius: radius.pill,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    overflow: "hidden",
   },
-  supportTitle: { fontWeight: "600" },
-  supportStatus: { color: "#888" },
-  card: { backgroundColor: "#f7f7f8", borderRadius: 12, padding: 16, gap: 4 },
-  body: { fontSize: 15 },
-  cardMeta: { color: "#888", fontSize: 13 },
-  empty: { color: "#888", textAlign: "center", marginTop: 40 },
+  badgeOpen: { backgroundColor: colors.amberSoft, color: colors.amber },
+  badgeAnswered: { backgroundColor: colors.primarySoft, color: colors.primaryDark },
+  helpCta: { fontSize: font.tiny, color: colors.textMuted, fontWeight: "700" },
 });

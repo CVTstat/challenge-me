@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { ActivityIndicator, View } from "react-native";
+import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { colors, font, shadow } from "@/theme";
 import { useAuth } from "@/providers/AuthProvider";
 import { usePendingInvite } from "@/providers/PendingInviteProvider";
 import LoginScreen from "@/screens/auth/LoginScreen";
@@ -60,6 +62,20 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// ธีมของ React Navigation เองก็ต้องตั้งด้วย ไม่งั้นพื้นหลังระหว่างสลับหน้าจะ
+// เป็นสีขาวล้วนตัดกับพื้นหลังนวล ๆ ของแอป
+const navTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: colors.primary,
+    background: colors.bg,
+    card: colors.card,
+    text: colors.text,
+    border: colors.border,
+  },
+};
+
 function AuthNavigator() {
   // ถ้ามีคนกดลิงก์ "ท้าเพื่อน" มาก่อน login ให้เห็นตัวอย่าง Challenge
   // ก่อนหน้า Login/Register (Flow ฟีเจอร์ใหม่ — ดู InviteLandingScreen)
@@ -76,53 +92,55 @@ function AuthNavigator() {
 // ────────────────────────────────────────────────────────────────────────────
 // โครงสร้างการนำทาง (ปรับตาม feedback ของผู้ใช้: "ให้แถบแท็บโชว์ทุกหน้า")
 //
-// เดิม: Tab อยู่ข้างในสุดของ Stack ใหญ่ → พอเปิดหน้าย่อย (เช่น Challenge
-// Detail, ท้าเพื่อน, ต้นไม้ของชุมชน) หน้าย่อยจะทับเต็มจอ แถบแท็บด้านล่างหายไป
-// ต้องกดปุ่มย้อนกลับอย่างเดียวถึงจะกลับมาเห็นแท็บอีกครั้ง
-//
-// ใหม่: Tab เป็นตัวนอกสุด แล้วแต่ละแท็บมี Stack ของตัวเอง ซึ่งบรรจุทั้งหน้าแรก
-// ของแท็บนั้นและหน้าย่อยทั้งหมด → เปิดหน้าย่อยจากแท็บไหน หน้านั้นก็เปิดอยู่
+// Tab เป็นตัวนอกสุด แล้วแต่ละแท็บมี Stack ของตัวเอง ซึ่งบรรจุทั้งหน้าแรกของ
+// แท็บนั้นและหน้าย่อยทั้งหมด → เปิดหน้าย่อยจากแท็บไหน หน้านั้นก็เปิดอยู่
 // "ข้างใน" แท็บนั้น แถบแท็บด้านล่างจึงยังอยู่ตลอด สลับแท็บได้ตลอดเวลา
 //
 // หมายเหตุ: หน้าย่อยชุดเดียวกันถูกประกาศซ้ำในทุกแท็บโดยตั้งใจ (เป็น pattern
 // มาตรฐานของ React Navigation) — navigate("ChallengeDetail") จะไปเปิดใน stack
-// ของแท็บที่กำลังใช้งานอยู่เสมอ ไม่ข้ามแท็บกัน ประวัติการกดย้อนกลับของแต่ละ
-// แท็บจึงแยกกันอย่างอิสระ
+// ของแท็บที่กำลังใช้งานอยู่เสมอ ไม่ข้ามแท็บกัน
 // ────────────────────────────────────────────────────────────────────────────
 // คืนค่าเป็น React.Fragment ที่ห่อ Stack.Screen ไว้ข้างใน — React Navigation
 // อนุญาตให้ direct child ของ Navigator เป็น Screen, Group หรือ React.Fragment
 // เท่านั้น (ห้ามเป็น component ของเราเอง) จึงต้องเรียกเป็นฟังก์ชันธรรมดาแบบนี้
-// ไม่ใช่เขียนเป็น <SharedDetailScreens />
 function sharedDetailScreens() {
   return (
     <>
       <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} options={{ title: "Challenge" }} />
-      <Stack.Screen name="ManageSupporters" component={ManageSupportersScreen} options={{ title: "Supporters" }} />
-      <Stack.Screen name="AskForHelp" component={AskForHelpScreen} options={{ title: "Ask for Help" }} />
-      <Stack.Screen
-        name="HelpRequestDetail"
-        component={HelpRequestDetailScreen}
-        options={{ title: "Community Help" }}
-      />
+      <Stack.Screen name="ManageSupporters" component={ManageSupportersScreen} options={{ title: "ผู้สนับสนุน" }} />
+      <Stack.Screen name="AskForHelp" component={AskForHelpScreen} options={{ title: "ขอความช่วยเหลือ" }} />
+      <Stack.Screen name="HelpRequestDetail" component={HelpRequestDetailScreen} options={{ title: "ชุมชนช่วยตอบ" }} />
       <Stack.Screen
         name="GlobalChallengeDetail"
         component={GlobalChallengeDetailScreen}
         options={{ title: "Global Challenge" }}
       />
-      <Stack.Screen name="EditExpertise" component={EditExpertiseScreen} options={{ title: "What I Can Help With" }} />
+      <Stack.Screen name="EditExpertise" component={EditExpertiseScreen} options={{ title: "ฉันช่วยอะไรได้บ้าง" }} />
       <Stack.Screen name="InviteFriend" component={InviteFriendScreen} options={{ title: "ท้าเพื่อน" }} />
       <Stack.Screen name="InviteLanding" component={InviteLandingScreen} options={{ title: "คำท้า" }} />
-      <Stack.Screen name="CommunityTree" component={CommunityTreeScreen} options={{ title: "🌏 ต้นไม้ของพวกเรา" }} />
+      <Stack.Screen name="CommunityTree" component={CommunityTreeScreen} options={{ title: "ต้นไม้ของพวกเรา" }} />
     </>
   );
 }
 
-const stackScreenOptions = { headerTitleAlign: "center" as const };
+// header ของหน้าย่อย: พื้นหลังกลืนกับแอป ไม่มีเส้นแบ่ง/เงา ตัวหนังสือหนา
+const stackScreenOptions = {
+  headerTitleAlign: "center" as const,
+  headerStyle: { backgroundColor: colors.bg },
+  headerShadowVisible: false,
+  headerTintColor: colors.text,
+  headerTitleStyle: { fontWeight: "700" as const, fontSize: font.h3 },
+  contentStyle: { backgroundColor: colors.bg },
+};
+
+// หน้าแรกของแต่ละแท็บซ่อน header ของ navigator ไว้ เพราะแต่ละหน้าวาดหัวข้อ
+// ของตัวเอง (ทักทายผู้ใช้ / โปรไฟล์ / ชื่อหน้า) ให้สวยกว่า header มาตรฐาน
+const tabRootOptions = { headerShown: false };
 
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
-      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ title: "🏠 Home" }} />
+      <Stack.Screen name="HomeMain" component={HomeScreen} options={tabRootOptions} />
       {sharedDetailScreens()}
     </Stack.Navigator>
   );
@@ -131,7 +149,7 @@ function HomeStack() {
 function GlobalStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
-      <Stack.Screen name="GlobalMain" component={GlobalScreen} options={{ title: "🌎 Global" }} />
+      <Stack.Screen name="GlobalMain" component={GlobalScreen} options={tabRootOptions} />
       {sharedDetailScreens()}
     </Stack.Navigator>
   );
@@ -140,7 +158,7 @@ function GlobalStack() {
 function ChallengeStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
-      <Stack.Screen name="ChallengeMain" component={CreateChallengeScreen} options={{ title: "➕ Challenge" }} />
+      <Stack.Screen name="ChallengeMain" component={CreateChallengeScreen} options={tabRootOptions} />
       {sharedDetailScreens()}
     </Stack.Navigator>
   );
@@ -149,7 +167,7 @@ function ChallengeStack() {
 function CommunityStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
-      <Stack.Screen name="CommunityMain" component={CommunityScreen} options={{ title: "❤️ Community" }} />
+      <Stack.Screen name="CommunityMain" component={CommunityScreen} options={tabRootOptions} />
       {sharedDetailScreens()}
     </Stack.Navigator>
   );
@@ -158,23 +176,79 @@ function CommunityStack() {
 function MeStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
-      <Stack.Screen name="MeMain" component={MeScreen} options={{ title: "👤 Me" }} />
+      <Stack.Screen name="MeMain" component={MeScreen} options={tabRootOptions} />
       {sharedDetailScreens()}
     </Stack.Navigator>
   );
 }
 
-// 5 แท็บหลักตาม USER-FLOWS.md §0/§18: Home, Global, Challenge, Community, Me
-// ปิด header ของตัว Tab เอง เพราะ header จริงมาจาก Stack ข้างในของแต่ละแท็บ
-// (ไม่งั้นจะเห็นแถบหัวข้อซ้อนกันสองชั้น)
+/** ไอคอนแท็บ — ใช้อิโมจิเพื่อไม่ต้องเพิ่ม dependency ชุดไอคอนเข้ามาใหม่ */
+function TabIcon({ glyph, focused }: { glyph: string; focused: boolean }) {
+  return <Text style={[styles.tabIcon, !focused && styles.tabIconIdle]}>{glyph}</Text>;
+}
+
+/**
+ * ปุ่ม ➕ ตรงกลางแถบแท็บ — ทำเป็นวงกลมสีเขียวลอยขึ้นมาเหนือแถบ ตามดีไซน์
+ * ที่ผู้ใช้ส่งมา เพื่อให้ "สร้าง Challenge ใหม่" เป็นปุ่มที่เด่นที่สุดในแอป
+ */
+function CreateTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps) {
+  const focused = !!accessibilityState?.selected;
+  return (
+    <View style={styles.fabSlot}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel="สร้าง Challenge ใหม่"
+        style={({ pressed }) => [
+          styles.fab,
+          focused && { backgroundColor: colors.primaryDark },
+          pressed && { opacity: 0.9 },
+        ]}
+      >
+        <Text style={styles.fabPlus}>+</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// 5 แท็บหลักตาม USER-FLOWS.md §0/§18: Home, Global, ➕, Community, Me
 function MainTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Home" component={HomeStack} options={{ title: "🏠 Home" }} />
-      <Tab.Screen name="Global" component={GlobalStack} options={{ title: "🌎 Global" }} />
-      <Tab.Screen name="Challenge" component={ChallengeStack} options={{ title: "➕ Challenge" }} />
-      <Tab.Screen name="Community" component={CommunityStack} options={{ title: "❤️ Community" }} />
-      <Tab.Screen name="Me" component={MeStack} options={{ title: "👤 Me" }} />
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primaryDark,
+        tabBarInactiveTintColor: colors.textFaint,
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarItemStyle: { paddingTop: 6 },
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeStack}
+        options={{ title: "Home", tabBarIcon: ({ focused }) => <TabIcon glyph="🏠" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="Global"
+        component={GlobalStack}
+        options={{ title: "Global", tabBarIcon: ({ focused }) => <TabIcon glyph="🌏" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="Challenge"
+        component={ChallengeStack}
+        options={{ title: "", tabBarButton: (props) => <CreateTabButton {...props} /> }}
+      />
+      <Tab.Screen
+        name="Community"
+        component={CommunityStack}
+        options={{ title: "Community", tabBarIcon: ({ focused }) => <TabIcon glyph="❤️" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="Me"
+        component={MeStack}
+        options={{ title: "Me", tabBarIcon: ({ focused }) => <TabIcon glyph="👤" focused={focused} /> }}
+      />
     </Tab.Navigator>
   );
 }
@@ -193,8 +267,6 @@ export default function RootNavigator() {
     if (!navReady || !session?.user) return;
     if (token && redirectedForToken.current !== token) {
       redirectedForToken.current = token;
-      // ระบุแท็บให้ชัดเจนว่าไปเปิดใน stack ของแท็บ Home (รูปแบบมาตรฐานสำหรับ
-      // navigator ซ้อนกัน) — ไม่พึ่งการเดาว่าตอนนี้โฟกัสอยู่แท็บไหน
       navRef.navigate("Home" as never, { screen: "InviteLanding" } as never);
     }
     if (!token) redirectedForToken.current = null;
@@ -202,15 +274,44 @@ export default function RootNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <NavigationContainer ref={navRef} onReady={() => setNavReady(true)}>
+    <NavigationContainer ref={navRef} theme={navTheme} onReady={() => setNavReady(true)}>
       {!session ? <AuthNavigator /> : <MainTabs />}
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
+  tabBar: {
+    height: 66,
+    paddingBottom: 8,
+    paddingTop: 4,
+    backgroundColor: colors.card,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+  },
+  tabLabel: { fontSize: font.tiny, fontWeight: "600", marginTop: -2 },
+  tabIcon: { fontSize: 20 },
+  tabIconIdle: { opacity: 0.45 },
+  fabSlot: { flex: 1, alignItems: "center", justifyContent: "flex-start" },
+  fab: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginTop: -16,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 4,
+    borderColor: colors.card,
+    ...shadow.float,
+  },
+  fabPlus: { color: colors.onPrimary, fontSize: 28, lineHeight: 32, fontWeight: "400", marginTop: -2 },
+});

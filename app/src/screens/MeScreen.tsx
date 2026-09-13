@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, Pressable, StyleSheet, FlatList } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
 
@@ -8,22 +9,21 @@ import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import TreeCanvas, { nextMilestone } from "@/components/TreeCanvas";
 import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
+import { Avatar, Card, ProgressBar, SectionTitle, StatTile } from "@/components/ui";
+import { colors, font, radius, spacing } from "@/theme";
 import type { DarumaRow, ProfileRow } from "@/types/database";
 
 // หน้านี้รวมทั้งสองสัญลักษณ์ของแอปไว้ด้วยกัน (ดู DarumaCanvas สำหรับเหตุผล):
-//   • ต้นไม้ด้านบน = ภาพรวมทั้งหมดของเรา ทุกใบคือความสำเร็จ 1 ครั้ง
-//   • ดารุมะในรายการ = เป้าหมายรายอัน เห็นทันทีว่าตัวไหนยังค้างตาข้างที่สองอยู่
+//   • ต้นไม้ = ภาพรวมทั้งหมดของเรา ทุกใบคือความสำเร็จ 1 ครั้ง
+//   • ดารุมะ = เป้าหมายรายอัน เห็นทันทีว่าตัวไหนยังค้างตาข้างที่สองอยู่
 //
 // การอ่านค่าจากฐานข้อมูลเดิม (ไม่ได้เปลี่ยนโครงสร้างตาราง):
 //   • right_eye_filled_at ไม่ null = ตาครบสองข้าง = สำเร็จ → ได้ใบไม้ 🍃
 //   • left_eye_filled_at ไม่ null  = เติมตาแรกแล้ว = กำลังพยายาม
 //   • ยังไม่มีทั้งคู่                = ดารุมะยังไม่มีตาเลย = ยังไม่เริ่ม
-//
-// หมายเหตุ (แก้บั๊กเดิม): Challenge ที่เพิ่งสร้างจะยังเป็นแบบร่าง (DRAFT) —
-// ยังไม่โผล่ในแท็บ Home จนกว่าจะเติมตาข้างแรกที่หน้ารายละเอียดก่อน แถวใน
-// รายการนี้จึงต้องกดเข้าไปได้เสมอ เพื่อไปเติมตาต่อ
 export default function MeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { session, signOut } = useAuth();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [darumas, setDarumas] = useState<(DarumaRow & { challenges: { title: string } | null })[]>([]);
@@ -53,116 +53,147 @@ export default function MeScreen() {
   const goal = nextMilestone(leaves);
 
   return (
-    <FlatList
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      data={darumas}
-      keyExtractor={(item) => item.id}
-      ListHeaderComponent={
-        <View>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
+    >
+      {/* หัวโปรไฟล์ */}
+      <View style={styles.profileRow}>
+        <Avatar name={profile?.display_name} size={62} />
+        <View style={{ flex: 1 }}>
           <Text style={styles.name}>{profile?.display_name ?? "..."}</Text>
-
-          <View style={styles.treeCard}>
-            <Text style={styles.treeTitle}>🌳 ต้นไม้ของฉัน</Text>
-            <TreeCanvas leaves={leaves} buds={growing} width={240} />
-
-            {/* สิ่งที่ผู้ใช้ขอ: เห็น "สำเร็จแล้ว" เทียบกับ "ที่ยังพยายามอยู่" */}
-            <View style={styles.scoreRow}>
-              <View style={styles.scoreBox}>
-                <Text style={styles.scoreNumber}>{leaves}</Text>
-                <Text style={styles.scoreLabel}>🍃 ใบไม้ที่ได้แล้ว</Text>
-                <Text style={styles.scoreSub}>ความสำเร็จจริง</Text>
-              </View>
-              <Text style={styles.scoreDivider}>/</Text>
-              <View style={styles.scoreBox}>
-                <Text style={[styles.scoreNumber, styles.scoreNumberSoft]}>{growing}</Text>
-                <Text style={styles.scoreLabel}>🌱 กำลังพยายาม</Text>
-                <Text style={styles.scoreSub}>ยังไม่จบ แต่ยังไม่แพ้</Text>
-              </View>
-            </View>
-
-            <Text style={styles.goalLine}>
-              {leaves === 0
-                ? "ต้นไม้ยังไม่มีใบเลย — ทำ Challenge แรกให้สำเร็จ เพื่อใบแรกของคุณ"
-                : `อีก ${Math.max(0, goal - leaves)} ใบ จะถึงเป้าหมาย ${goal} ใบ`}
-            </Text>
-            {seeds > 0 && <Text style={styles.seedLine}>มีดารุมะ {seeds} ตัวที่ยังไม่ได้เติมตาเลย</Text>}
-          </View>
-
-          <Pressable style={styles.treeLinkButton} onPress={() => navigation.navigate("CommunityTree")}>
-            <Text style={styles.treeLinkText}>🌏 ดูต้นไม้ของทั้งชุมชน</Text>
-          </Pressable>
-
-          <Text style={styles.listHeader}>ดารุมะของฉัน</Text>
+          <Text style={styles.motto}>เล็ก ๆ ทุกวัน เปลี่ยนคุณได้</Text>
         </View>
-      }
-      renderItem={({ item }) => (
-        <Pressable
-          style={styles.row}
-          onPress={() => navigation.navigate("ChallengeDetail", { challengeId: item.challenge_id })}
-        >
-          {/* ดารุมะประจำ Challenge แต่ละอัน — เห็นได้ทันทีว่าตัวไหนยังค้างตาอยู่ */}
-          <DarumaCanvas eyes={darumaEyesFrom(item.left_eye_filled_at, item.right_eye_filled_at)} width={44} />
-          <Text style={styles.rowTitle}>{item.challenges?.title ?? "-"}</Text>
-          {!item.left_eye_filled_at && <Text style={styles.rowHint}>แตะเพื่อเติมตาแรก →</Text>}
+      </View>
+
+      {/* สถิติรวมของเรา */}
+      <View style={styles.statRow}>
+        <StatTile value={leaves} label="ใบไม้ที่ได้แล้ว" emoji="🍃" color={colors.primary} />
+        <StatTile value={growing} label="กำลังพยายาม" emoji="🌱" color={colors.amber} />
+        <StatTile value={darumas.length} label="Challenge ทั้งหมด" emoji="🎯" color={colors.accent} />
+      </View>
+
+      {/* ต้นไม้ของฉัน */}
+      <Card style={styles.treeCard}>
+        <Text style={styles.treeTitle}>🌳 ต้นไม้ของฉัน</Text>
+        <TreeCanvas leaves={leaves} buds={growing} width={230} />
+        <ProgressBar value={goal <= 0 ? 0 : leaves / goal} style={{ marginTop: spacing.lg }} />
+        <Text style={styles.goalLine}>
+          {leaves === 0
+            ? "ต้นไม้ยังไม่มีใบเลย — ทำ Challenge แรกให้สำเร็จ เพื่อใบแรกของคุณ"
+            : `อีก ${Math.max(0, goal - leaves)} ใบ จะถึงเป้าหมาย ${goal} ใบ`}
+        </Text>
+        <Pressable onPress={() => navigation.navigate("CommunityTree")} hitSlop={8}>
+          <Text style={styles.treeLink}>🌏 ดูต้นไม้ของทั้งชุมชน ›</Text>
         </Pressable>
-      )}
-      ListEmptyComponent={
-        <Text style={styles.empty}>ยังไม่มีอะไรบนต้นไม้เลย — ไปสร้าง Challenge แรกกันเถอะ</Text>
-      }
-      ListFooterComponent={
-        <View>
-          <Pressable style={styles.linkButton} onPress={() => navigation.navigate("EditExpertise")}>
-            <Text style={styles.linkButtonText}>🧭 ฉันช่วยคนอื่นเรื่องอะไรได้บ้าง</Text>
-          </Pressable>
+      </Card>
 
-          <Pressable style={styles.signOutButton} onPress={signOut}>
-            <Text style={styles.signOutText}>ออกจากระบบ</Text>
-          </Pressable>
+      {/* คอลเลกชันดารุมะ */}
+      <SectionTitle>ดารุมะของฉัน</SectionTitle>
+      {seeds > 0 && <Text style={styles.seedLine}>มีดารุมะ {seeds} ตัวที่ยังไม่ได้เติมตาเลย — แตะเพื่อเริ่ม</Text>}
+      {darumas.length === 0 ? (
+        <Text style={styles.empty}>ยังไม่มีดารุมะเลย — สร้าง Challenge แรกกันเถอะ</Text>
+      ) : (
+        <View style={styles.darumaGrid}>
+          {darumas.map((item) => {
+            const eyes = darumaEyesFrom(item.left_eye_filled_at, item.right_eye_filled_at);
+            return (
+              <Pressable
+                key={item.id}
+                style={styles.darumaCell}
+                onPress={() => navigation.navigate("ChallengeDetail", { challengeId: item.challenge_id })}
+              >
+                <DarumaCanvas eyes={eyes} width={64} />
+                <Text style={styles.darumaName} numberOfLines={2}>
+                  {item.challenges?.title ?? "-"}
+                </Text>
+                <Text style={[styles.darumaState, eyes === 2 && { color: colors.primary }]}>
+                  {eyes === 2 ? "สำเร็จแล้ว 🍃" : eyes === 1 ? "กำลังพยายาม" : "ยังไม่เริ่ม"}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
-      }
-    />
+      )}
+
+      {/* เมนู */}
+      <View style={styles.menu}>
+        <MenuRow
+          icon="🧭"
+          label="ฉันช่วยคนอื่นเรื่องอะไรได้บ้าง"
+          onPress={() => navigation.navigate("EditExpertise")}
+        />
+        <MenuRow icon="🌏" label="ต้นไม้ของทั้งชุมชน" onPress={() => navigation.navigate("CommunityTree")} />
+        <MenuRow icon="🚪" label="ออกจากระบบ" danger onPress={signOut} />
+      </View>
+    </ScrollView>
+  );
+}
+
+function MenuRow({
+  icon,
+  label,
+  onPress,
+  danger,
+}: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.menuRow, pressed && { opacity: 0.7 }]}>
+      <Text style={styles.menuIcon}>{icon}</Text>
+      <Text style={[styles.menuLabel, danger && { color: colors.accent }]}>{label}</Text>
+      <Text style={styles.menuChevron}>›</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40 },
-  name: { fontSize: 22, fontWeight: "700" },
-  treeCard: {
-    marginTop: 12,
-    backgroundColor: "#f4f8f1",
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
+  screen: { flex: 1, backgroundColor: colors.bg },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
+
+  profileRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
+  name: { fontSize: font.h2, fontWeight: "800", color: colors.text },
+  motto: { fontSize: font.small, color: colors.textMuted, marginTop: 2 },
+
+  statRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg },
+
+  treeCard: { alignItems: "center", paddingVertical: spacing.xl },
+  treeTitle: { fontSize: font.h3, fontWeight: "700", color: colors.primaryDark, marginBottom: spacing.sm },
+  goalLine: { marginTop: spacing.sm, fontSize: font.small, color: colors.textMuted, textAlign: "center" },
+  treeLink: { marginTop: spacing.md, color: colors.primary, fontWeight: "700", fontSize: font.small },
+
+  seedLine: { fontSize: font.small, color: colors.amber, marginBottom: spacing.sm },
+  empty: { color: colors.textFaint, marginTop: spacing.sm },
+  darumaGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  darumaCell: {
+    width: "30.5%",
+    minWidth: 96,
+    flexGrow: 1,
     alignItems: "center",
-  },
-  treeTitle: { fontSize: 16, fontWeight: "700", color: "#2e7d32", marginBottom: 4 },
-  scoreRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 8 },
-  scoreBox: { alignItems: "center", flex: 1 },
-  scoreNumber: { fontSize: 32, fontWeight: "800", color: "#2e7d32" },
-  scoreNumberSoft: { color: "#8aa87f" },
-  scoreLabel: { fontSize: 13, fontWeight: "600", color: "#3d4a37", marginTop: 2 },
-  scoreSub: { fontSize: 11, color: "#8a9484", marginTop: 1 },
-  scoreDivider: { fontSize: 24, color: "#c3d1bc", fontWeight: "300" },
-  goalLine: { marginTop: 14, fontSize: 13, color: "#5a6b54", textAlign: "center" },
-  seedLine: { marginTop: 4, fontSize: 12, color: "#9a8f7d" },
-  treeLinkButton: {
-    marginTop: 12,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#cfe0c8",
-    backgroundColor: "#fbfdfa",
-    borderRadius: 10,
-    padding: 12,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
-  treeLinkText: { textAlign: "center", fontWeight: "700", color: "#2e7d32" },
-  listHeader: { marginTop: 22, marginBottom: 4, fontSize: 15, fontWeight: "700", color: "#333" },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
-  rowTitle: { fontSize: 15, flex: 1 },
-  rowHint: { color: "#e11d48", fontSize: 12, fontWeight: "600" },
-  empty: { color: "#888", marginTop: 16 },
-  linkButton: { marginTop: 20, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
-  linkButtonText: { textAlign: "center", fontWeight: "600", color: "#333" },
-  signOutButton: { marginTop: 12, padding: 14, alignItems: "center" },
-  signOutText: { color: "#e11d48", fontWeight: "600" },
+  darumaName: { fontSize: font.tiny, fontWeight: "700", color: colors.text, textAlign: "center", marginTop: 6 },
+  darumaState: { fontSize: font.tiny, color: colors.textFaint, marginTop: 2 },
+
+  menu: { marginTop: spacing.xxl, backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border },
+  menuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: 15,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  menuIcon: { fontSize: 18 },
+  menuLabel: { flex: 1, fontSize: font.body, fontWeight: "600", color: colors.text },
+  menuChevron: { fontSize: 20, color: colors.textFaint },
 });

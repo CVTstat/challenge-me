@@ -117,12 +117,12 @@ export default function InviteLandingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, justifyContent: "center", gap: 12 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 24 },
-  badge: { color: "#e11d48", fontWeight: "700" },
+  badge: { color: "#e8415a", fontWeight: "700" },
   title: { fontSize: 24, fontWeight: "700", textAlign: "center" },
-  goal: { fontSize: 16, color: "#555" },
-  reward: { fontSize: 14, color: "#b45309" },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 16, marginTop: 20 },
+  goal: { fontSize: 16, color: "#6b7f70" },
+  reward: { fontSize: 14, color: "#f59e0b" },
+  primaryButton: { backgroundColor: "#e8415a", borderRadius: 8, padding: 16, marginTop: 20 },
   primaryButtonText: { color: "white", textAlign: "center", fontWeight: "700", fontSize: 16 },
   secondaryButton: { padding: 12 },
-  secondaryButtonText: { color: "#888", textAlign: "center" },
+  secondaryButtonText: { color: "#6b7f70", textAlign: "center" },
 });

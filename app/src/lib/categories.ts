@@ -12,32 +12,51 @@
 export interface CategoryOption {
   value: string;
   label: string;
+  icon: string;
 }
 
 export const OTHER_CATEGORY_VALUE = "other";
 
 export const CHALLENGE_CATEGORIES: CategoryOption[] = [
-  { value: "health", label: "🏃 สุขภาพ/ออกกำลังกาย" },
-  { value: "finance", label: "💰 การเงิน" },
-  { value: "career", label: "💼 การงาน/อาชีพ" },
-  { value: "education", label: "📚 การเรียน/ทักษะ" },
-  { value: "relationship", label: "❤️ ความสัมพันธ์/ครอบครัว" },
-  { value: "habit", label: "🔄 นิสัย/ไลฟ์สไตล์" },
-  { value: "mindset", label: "🧘 จิตใจ/สติ" },
-  { value: "hobby", label: "🎨 งานอดิเรก" },
-  { value: OTHER_CATEGORY_VALUE, label: "✏️ อื่นๆ (พิมพ์เอง)" },
+  { value: "health", label: "สุขภาพ", icon: "❤️" },
+  { value: "fitness", label: "ออกกำลังกาย", icon: "🏃" },
+  { value: "career", label: "การงาน", icon: "💼" },
+  { value: "education", label: "การเรียน", icon: "📖" },
+  { value: "finance", label: "การเงิน", icon: "💰" },
+  { value: "self_growth", label: "พัฒนาตัวเอง", icon: "🌟" },
+  { value: "relationship", label: "ครอบครัว", icon: "👨‍👩‍👧" },
+  { value: "environment", label: "สิ่งแวดล้อม", icon: "🌱" },
+  { value: "habit", label: "นิสัยประจำวัน", icon: "🔄" },
+  { value: OTHER_CATEGORY_VALUE, label: "อื่น ๆ", icon: "✏️" },
 ];
 
 export const EXPERTISE_CATEGORIES: CategoryOption[] = [
-  { value: "smoking_cessation", label: "🚭 เลิกบุหรี่/เลิกเหล้า" },
-  { value: "fitness", label: "🏃 ออกกำลังกาย/วิ่ง" },
-  { value: "weight_loss", label: "⚖️ ลดน้ำหนัก" },
-  { value: "finance", label: "💰 การเงิน/การออม" },
-  { value: "career", label: "💼 อาชีพ/การงาน" },
-  { value: "education", label: "📚 การเรียน/สอบ" },
-  { value: "relationship", label: "❤️ ความสัมพันธ์/ครอบครัว" },
-  { value: "wellbeing", label: "🧘 สุขภาพใจ/ลดความเครียด" },
-  { value: "business", label: "🚀 ธุรกิจ/สตาร์ทอัพ" },
-  { value: "general_skill", label: "🛠️ ทักษะทั่วไป" },
-  { value: OTHER_CATEGORY_VALUE, label: "✏️ อื่นๆ (พิมพ์เอง)" },
+  { value: "smoking_cessation", label: "เลิกบุหรี่/เหล้า", icon: "🚭" },
+  { value: "fitness", label: "ออกกำลังกาย", icon: "🏃" },
+  { value: "weight_loss", label: "ลดน้ำหนัก", icon: "⚖️" },
+  { value: "finance", label: "การเงิน", icon: "💰" },
+  { value: "career", label: "อาชีพ/การงาน", icon: "💼" },
+  { value: "education", label: "การเรียน/สอบ", icon: "📖" },
+  { value: "relationship", label: "ครอบครัว", icon: "👨‍👩‍👧" },
+  { value: "wellbeing", label: "สุขภาพใจ", icon: "🧘" },
+  { value: "business", label: "ธุรกิจ", icon: "🚀" },
+  { value: "general_skill", label: "ทักษะทั่วไป", icon: "🛠️" },
+  { value: OTHER_CATEGORY_VALUE, label: "อื่น ๆ", icon: "✏️" },
 ];
+
+// รวมทั้งสองชุดไว้ค้นหาไอคอน/ชื่อไทยของ category ที่บันทึกไว้แล้ว
+const ALL_OPTIONS = [...CHALLENGE_CATEGORIES, ...EXPERTISE_CATEGORIES];
+
+/** ไอคอนประจำหมวด — ใช้กับการ์ด Challenge ในหน้า Home/Me (ไม่รู้จักก็ใช้ 🎯) */
+export function categoryIcon(category?: string | null): string {
+  if (!category) return "🎯";
+  const found = ALL_OPTIONS.find((o) => o.value === category.trim().toLowerCase());
+  return found && found.value !== OTHER_CATEGORY_VALUE ? found.icon : "🎯";
+}
+
+/** ชื่อไทยของหมวด — ถ้าเป็นค่าที่ผู้ใช้พิมพ์เอง ก็แสดงตามที่พิมพ์ */
+export function categoryLabel(category?: string | null): string {
+  if (!category) return "";
+  const found = ALL_OPTIONS.find((o) => o.value === category.trim().toLowerCase());
+  return found && found.value !== OTHER_CATEGORY_VALUE ? found.label : category;
+}

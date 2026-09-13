@@ -85,11 +85,11 @@ export default function AskForHelpScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   heading: { fontSize: 20, fontWeight: "700" },
-  subheading: { color: "#666", marginTop: 4, marginBottom: 16 },
+  subheading: { color: "#6b7f70", marginTop: 4, marginBottom: 16 },
   label: { fontWeight: "600", marginTop: 12 },
   textArea: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#e7ede8",
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
@@ -98,10 +98,10 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
-  optionChip: { borderWidth: 1, borderColor: "#ddd", borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14 },
-  optionChipActive: { backgroundColor: "#e11d48", borderColor: "#e11d48" },
-  optionText: { color: "#333" },
+  optionChip: { borderWidth: 1, borderColor: "#e7ede8", borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14 },
+  optionChipActive: { backgroundColor: "#e8415a", borderColor: "#e8415a" },
+  optionText: { color: "#1b2a20" },
   optionTextActive: { color: "white", fontWeight: "600" },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 14, marginTop: 24 },
+  primaryButton: { backgroundColor: "#e8415a", borderRadius: 8, padding: 14, marginTop: 24 },
   primaryButtonText: { color: "white", textAlign: "center", fontWeight: "600", fontSize: 16 },
 });

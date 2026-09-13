@@ -20,6 +20,48 @@ export interface ProgressSummary {
   checkIns: CheckInRow[];
 }
 
+/**
+ * สรุปความคืบหน้าของหลาย Challenge พร้อมกันในทีเดียว — ใช้ที่หน้า Home เพื่อ
+ * วาดแถบความคืบหน้าใต้ Challenge แต่ละอัน
+ *
+ * จงใจใช้แค่ 2 query ไม่ว่าจะมีกี่ Challenge (ดึง attempt ทั้งหมดทีเดียว แล้ว
+ * ดึง check-in ของทุก attempt ทีเดียว) แทนการวนเรียกทีละอัน ซึ่งจะช้าขึ้น
+ * เรื่อย ๆ ตามจำนวน Challenge ที่ผู้ใช้มี
+ */
+export async function getProgressForChallenges(challengeIds: string[]) {
+  const empty: Record<string, { totalCheckIns: number; totalValue: number }> = {};
+  if (challengeIds.length === 0) return { progress: empty, error: null };
+
+  const { data: attempts, error: attemptError } = await supabase
+    .from("challenge_attempts")
+    .select("id, challenge_id")
+    .in("challenge_id", challengeIds);
+  if (attemptError) return { progress: empty, error: attemptError.message };
+
+  const attemptToChallenge = new Map<string, string>();
+  for (const a of attempts ?? []) attemptToChallenge.set(a.id as string, a.challenge_id as string);
+  const attemptIds = [...attemptToChallenge.keys()];
+  if (attemptIds.length === 0) return { progress: empty, error: null };
+
+  const { data: rows, error: checkInError } = await supabase
+    .from("check_ins")
+    .select("challenge_attempt_id, value_number")
+    .in("challenge_attempt_id", attemptIds);
+  if (checkInError) return { progress: empty, error: checkInError.message };
+
+  const progress = { ...empty };
+  for (const row of rows ?? []) {
+    const challengeId = attemptToChallenge.get(row.challenge_attempt_id as string);
+    if (!challengeId) continue;
+    const bucket = progress[challengeId] ?? { totalCheckIns: 0, totalValue: 0 };
+    bucket.totalCheckIns += 1;
+    const v = Number(row.value_number);
+    if (Number.isFinite(v)) bucket.totalValue += v;
+    progress[challengeId] = bucket;
+  }
+  return { progress, error: null };
+}
+
 /** FR9.1: นับช่วงเวลาที่มี check-in ติดต่อกัน ย้อนจากล่าสุด (DAILY เป็นหลัก) */
 function computeCurrentStreak(sortedDesc: CheckInRow[], frequency: ChallengeRow["checkin_frequency"]): number {
   if (sortedDesc.length === 0) return 0;

@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from "react-native";
 import { showAlert } from "@/lib/alert";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
+import DarumaCanvas from "@/components/DarumaCanvas";
+import { OutlineButton, PrimaryButton } from "@/components/ui";
+import { colors, font, radius, shadow, spacing } from "@/theme";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
@@ -22,43 +25,92 @@ export default function LoginScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>🔥 Challenge Me</Text>
-      <Text style={styles.subtitle}>เปลี่ยนสิ่งที่อยากทำ ให้กลายเป็นสิ่งที่ทำสำเร็จ</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+      {/* โลโก้ + ชื่อแบรนด์ + สโลแกน */}
+      <View style={styles.logoBadge}>
+        <Text style={styles.logoGlyph}>🌱</Text>
+      </View>
+      <Text style={styles.brand}>Challenge Me</Text>
+      <Text style={styles.tagline}>เล็ก ๆ ทุกวัน เปลี่ยนคุณได้</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="อีเมล"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="รหัสผ่าน"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      {/* มาสคอตดารุมะ — ยังไม่มีตาสักข้าง เพราะการเดินทางเพิ่งจะเริ่ม */}
+      <View style={styles.mascot}>
+        <DarumaCanvas eyes={0} width={128} />
+      </View>
 
-      <Pressable style={styles.primaryButton} onPress={handleLogin} disabled={submitting}>
-        <Text style={styles.primaryButtonText}>{submitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}</Text>
-      </Pressable>
+      <Text style={styles.headline}>เปลี่ยนสิ่งที่อยากทำ{"\n"}ให้กลายเป็นสิ่งที่ทำสำเร็จ</Text>
+
+      <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="อีเมล"
+          placeholderTextColor={colors.textFaint}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="รหัสผ่าน"
+          placeholderTextColor={colors.textFaint}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+
+        <PrimaryButton
+          label={submitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+          onPress={handleLogin}
+          disabled={submitting}
+          style={styles.loginButton}
+        />
+        <OutlineButton label="สมัครสมาชิก" onPress={() => navigation.navigate("Register")} />
+      </View>
 
       <Pressable onPress={() => navigation.navigate("Register")}>
-        <Text style={styles.link}>ยังไม่มีบัญชี? สมัครสมาชิก</Text>
+        <Text style={styles.footnote}>เล็ก ๆ ทุกวัน เปลี่ยนคุณได้</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, gap: 12 },
-  title: { fontSize: 32, fontWeight: "700", textAlign: "center" },
-  subtitle: { textAlign: "center", color: "#666", marginBottom: 24 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16 },
-  primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 14, marginTop: 8 },
-  primaryButtonText: { color: "white", textAlign: "center", fontWeight: "600", fontSize: 16 },
-  link: { textAlign: "center", marginTop: 16, color: "#e11d48" },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  container: { flexGrow: 1, justifyContent: "center", alignItems: "center", padding: spacing.xl, paddingVertical: 40 },
+  logoBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.lg,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+    ...shadow.card,
+  },
+  logoGlyph: { fontSize: 32 },
+  brand: { fontSize: 28, fontWeight: "800", color: colors.primaryDark, marginTop: spacing.md },
+  tagline: { fontSize: font.small, color: colors.textMuted, marginTop: 2 },
+  mascot: { marginTop: spacing.lg, marginBottom: spacing.sm },
+  headline: {
+    fontSize: font.h3,
+    fontWeight: "700",
+    color: colors.text,
+    textAlign: "center",
+    lineHeight: 26,
+    marginBottom: spacing.xl,
+  },
+  form: { alignSelf: "stretch", gap: spacing.md, maxWidth: 420, width: "100%", alignItems: "stretch" },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: 14,
+    fontSize: font.body,
+    color: colors.text,
+  },
+  loginButton: { marginTop: spacing.xs },
+  footnote: { marginTop: spacing.xl, fontSize: font.tiny, color: colors.textFaint },
 });

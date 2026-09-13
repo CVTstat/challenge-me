@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator }
 import { useFocusEffect } from "@react-navigation/native";
 
 import TreeCanvas, { nextMilestone, TREE_CAPACITY } from "@/components/TreeCanvas";
+import { ProgressBar, StatTile } from "@/components/ui";
+import { colors, font, radius, shadow, spacing } from "@/theme";
 import { getTreeStats } from "@/api/tree";
 import type { TreeStats } from "@/api/tree";
 
@@ -29,7 +31,7 @@ export default function CommunityTreeScreen() {
   if (loading && !stats) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -47,46 +49,34 @@ export default function CommunityTreeScreen() {
 
   return (
     <ScrollView
+      style={styles.screen}
       contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.primary} />}
     >
       <Text style={styles.title}>🌏 ต้นไม้ของพวกเราทุกคน</Text>
       <Text style={styles.subtitle}>ทุกใบบนต้นนี้ คือความสำเร็จจริงของใครสักคนในแอป</Text>
 
       <View style={styles.treeCard}>
         <TreeCanvas leaves={scaled(platformLeaves)} buds={scaled(platformGrowing)} width={280} />
-        <View style={styles.scoreRow}>
-          <View style={styles.scoreBox}>
-            <Text style={styles.scoreNumber}>{platformLeaves}</Text>
-            <Text style={styles.scoreLabel}>🍃 สำเร็จแล้ว</Text>
-          </View>
-          <Text style={styles.scoreDivider}>/</Text>
-          <View style={styles.scoreBox}>
-            <Text style={[styles.scoreNumber, styles.scoreNumberSoft]}>{platformGrowing}</Text>
-            <Text style={styles.scoreLabel}>🌱 กำลังพยายาม</Text>
-          </View>
+        <View style={styles.statRow}>
+          <StatTile emoji="🍃" value={platformLeaves} label="สำเร็จแล้ว" color={colors.primary} />
+          <StatTile emoji="🌱" value={platformGrowing} label="กำลังพยายาม" color={colors.amber} />
+          <StatTile emoji="👥" value={platformGrowers} label="ผู้ร่วมทาง" color={colors.accent} />
         </View>
+        <ProgressBar value={goal <= 0 ? 0 : platformLeaves / goal} style={{ marginTop: spacing.lg }} />
         <Text style={styles.goalLine}>
           {platformLeaves === 0
             ? "ยังไม่มีใบไม้ใบแรกของชุมชน — คุณอาจเป็นคนแรกก็ได้"
             : `อีก ${Math.max(0, goal - platformLeaves)} ใบ จะถึงเป้าหมายร่วม ${goal} ใบ`}
         </Text>
-        <Text style={styles.growersLine}>👥 มี {platformGrowers} คนกำลังปลูกต้นไม้ของตัวเองอยู่</Text>
       </View>
 
       <Text style={styles.sectionTitle}>🌳 ต้นไม้ของฉันในป่านี้</Text>
       <View style={[styles.treeCard, styles.myTreeCard]}>
         <TreeCanvas leaves={myLeaves} buds={myGrowing} width={200} />
-        <View style={styles.scoreRow}>
-          <View style={styles.scoreBox}>
-            <Text style={styles.scoreNumberSmall}>{myLeaves}</Text>
-            <Text style={styles.scoreLabel}>🍃 สำเร็จแล้ว</Text>
-          </View>
-          <Text style={styles.scoreDivider}>/</Text>
-          <View style={styles.scoreBox}>
-            <Text style={[styles.scoreNumberSmall, styles.scoreNumberSoft]}>{myGrowing}</Text>
-            <Text style={styles.scoreLabel}>🌱 กำลังพยายาม</Text>
-          </View>
+        <View style={styles.statRow}>
+          <StatTile emoji="🍃" value={myLeaves} label="สำเร็จแล้ว" color={colors.primary} />
+          <StatTile emoji="🌱" value={myGrowing} label="กำลังพยายาม" color={colors.amber} />
         </View>
         {platformLeaves > 0 && myLeaves > 0 && (
           <Text style={styles.goalLine}>
@@ -104,28 +94,31 @@ export default function CommunityTreeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 20, fontWeight: "700", textAlign: "center" },
-  subtitle: { color: "#7a8574", textAlign: "center", marginTop: 4, fontSize: 13 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  container: { padding: spacing.lg, paddingBottom: 40 },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
+  title: { fontSize: font.h2, fontWeight: "800", textAlign: "center", color: colors.text },
+  subtitle: { color: colors.textMuted, textAlign: "center", marginTop: 4, fontSize: font.small },
   treeCard: {
-    marginTop: 16,
-    backgroundColor: "#f4f8f1",
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
+    marginTop: spacing.lg,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
     alignItems: "center",
+    ...shadow.card,
   },
-  myTreeCard: { backgroundColor: "#fbfdfa", borderWidth: 1, borderColor: "#e4eede" },
-  scoreRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 },
-  scoreBox: { alignItems: "center", flex: 1 },
-  scoreNumber: { fontSize: 34, fontWeight: "800", color: "#2e7d32" },
-  scoreNumberSmall: { fontSize: 26, fontWeight: "800", color: "#2e7d32" },
-  scoreNumberSoft: { color: "#8aa87f" },
-  scoreLabel: { fontSize: 13, fontWeight: "600", color: "#3d4a37", marginTop: 2 },
-  scoreDivider: { fontSize: 24, color: "#c3d1bc", fontWeight: "300" },
-  goalLine: { marginTop: 12, fontSize: 13, color: "#5a6b54", textAlign: "center" },
-  growersLine: { marginTop: 6, fontSize: 12, color: "#8a9484" },
-  sectionTitle: { marginTop: 28, fontSize: 16, fontWeight: "700", color: "#333" },
-  footnote: { marginTop: 24, fontSize: 12, color: "#9aa294", textAlign: "center", lineHeight: 18 },
+  myTreeCard: { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder },
+  statRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg, alignSelf: "stretch" },
+  goalLine: { marginTop: spacing.md, fontSize: font.small, color: colors.textMuted, textAlign: "center" },
+  sectionTitle: { marginTop: spacing.xxl, fontSize: font.h3, fontWeight: "700", color: colors.text },
+  footnote: {
+    marginTop: spacing.xxl,
+    fontSize: font.tiny,
+    color: colors.textFaint,
+    textAlign: "center",
+    lineHeight: 18,
+  },
 });
