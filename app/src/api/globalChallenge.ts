@@ -27,7 +27,7 @@ export async function joinGlobalChallenge(globalChallengeId: string, userId: str
   if (gcError || !gc) return { error: gcError?.message ?? "ไม่พบ Global Challenge นี้" };
 
   if (gc.has_limited_daruma && (gc.limited_daruma_claimed ?? 0) >= (gc.limited_daruma_total ?? 0)) {
-    return { error: "Limited Daruma เต็มโควต้าแล้ว" };
+    return { error: "ใบไม้พิเศษ (Limited) เต็มโควต้าแล้ว" };
   }
 
   const { data: challenge, error: challengeError } = await supabase

@@ -27,10 +27,21 @@ const DEFAULT_PRIVACY_FIELDS: PrivacyFields = {
   show_health_data: false,
 };
 
+// ────────────────────────────────────────────────────────────────────────────
+// ธีม "ต้นไม้แห่งความสำเร็จ" (เปลี่ยนจาก Daruma เดิมตาม feedback ของผู้ใช้)
+//
+// ตาราง daruma และคอลัมน์ left_eye_filled_at / right_eye_filled_at ในฐานข้อมูล
+// ยังใช้ชื่อเดิมอยู่ (ตั้งใจไม่เปลี่ยนชื่อคอลัมน์ เพราะมีข้อมูลจริงใช้งานอยู่
+// แล้ว การ rename มีความเสี่ยงโดยไม่จำเป็น) — เปลี่ยนแค่ "ความหมาย" ที่เอาไป
+// แสดงผลเท่านั้น:
+//   • left_eye_filled_at  = เริ่มลงมือปลูกแล้ว  → 🌱 กำลังพยายาม
+//   • right_eye_filled_at = ทำสำเร็จแล้ว        → 🍃 ได้ใบไม้ 1 ใบ
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
- * Flow 2 / FR4.3: submit form -> สร้าง challenges (status DRAFT) + daruma +
- * challenge_attempts แรก แล้วพาไป First-Eye Ritual (ยังไม่ ACTIVE จนกว่าจะ
- * เติมตาแรกจริง — ดู fillFirstEye ด้านล่าง, ตรง FR7.1/FR7.2)
+ * Flow 2 / FR4.3: submit form -> สร้าง challenges (status DRAFT) + แถวต้นไม้ +
+ * challenge_attempts แรก แล้วพาไปพิธี "เริ่มปลูก" (ยังไม่ ACTIVE จนกว่าจะกด
+ * เริ่มปลูกจริง — ดู startGrowing ด้านล่าง, ตรง FR7.1/FR7.2)
  */
 export async function createPersonalChallenge(ownerId: string, input: NewPersonalChallengeInput) {
   const { data: challenge, error: challengeError } = await supabase
@@ -71,10 +82,11 @@ export async function createPersonalChallenge(ownerId: string, input: NewPersona
 }
 
 /**
- * Flow 4 / FR7.1: ต้องมาจากการกดของผู้ใช้เท่านั้น ห้ามเรียกอัตโนมัติจากที่ไหน
- * ทั้งสิ้น — เติมตาแรก + เปลี่ยน Challenge เป็น ACTIVE
+ * Flow 4 / FR7.1: "เริ่มปลูก" — ต้องมาจากการกดของผู้ใช้เท่านั้น ห้ามเรียก
+ * อัตโนมัติจากที่ไหนทั้งสิ้น เพราะนี่คือพิธีการให้คำมั่นกับตัวเองว่าจะเริ่มจริง
+ * (เดิมคือ "เติมตาข้างแรกของ Daruma") + เปลี่ยน Challenge เป็น ACTIVE
  */
-export async function fillFirstEye(challengeId: string) {
+export async function startGrowing(challengeId: string) {
   const { error: darumaError } = await supabase
     .from("daruma")
     .update({ left_eye_filled_at: new Date().toISOString() })
@@ -89,9 +101,10 @@ export async function fillFirstEye(challengeId: string) {
 }
 
 /**
- * Flow 11 / FR15.1: เติมตาที่สอง — ต้องมาจากการกดของผู้ใช้เท่านั้นเช่นกัน
+ * Flow 11 / FR15.1: "ได้ใบไม้" — ทำสำเร็จจริงแล้ว ต้นไม้ได้ใบเพิ่ม 1 ใบ
+ * (เดิมคือ "เติมตาข้างที่สอง") ต้องมาจากการกดของผู้ใช้เท่านั้นเช่นกัน
  */
-export async function fillSecondEye(challengeId: string) {
+export async function earnLeaf(challengeId: string) {
   const { error: darumaError } = await supabase
     .from("daruma")
     .update({ right_eye_filled_at: new Date().toISOString() })

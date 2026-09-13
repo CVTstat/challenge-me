@@ -77,7 +77,7 @@ export default function GlobalChallengeDetailScreen() {
 
       {globalChallenge.has_limited_daruma && (
         <Text style={styles.limited}>
-          🔴 Limited Daruma {globalChallenge.limited_daruma_claimed}/{globalChallenge.limited_daruma_total}
+          🍃 ใบไม้พิเศษ (Limited) {globalChallenge.limited_daruma_claimed}/{globalChallenge.limited_daruma_total}
           {quotaFull ? " — เต็มโควต้าแล้ว" : ""}
         </Text>
       )}

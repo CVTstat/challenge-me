@@ -15,12 +15,13 @@ import type { ChallengeRow, ShareCardType } from "@/types/database";
 
 const DEEP_LINK_SCHEME = "challengeme://challenge";
 
+// ข้อความตามธีมต้นไม้: เริ่มปลูก → ดูแลจนโต → ได้ใบไม้ 1 ใบเมื่อสำเร็จจริง
 const SHARE_COPY: Record<ShareCardType, (c: ChallengeRow) => string> = {
-  START: (c) => `🔴 NEW DARUMA\n\nI ACCEPTED THE CHALLENGE\n${c.title}\n\n❤️ CHEER FOR ME`,
-  PROGRESS: (c) => `🔥 กำลังทำ Challenge: ${c.title}\n\n❤️ CHEER FOR ME`,
-  MILESTONE: (c) => `🎯 ถึง Milestone ใหม่แล้วใน "${c.title}"!\n\n❤️ CHEER FOR ME`,
-  IM_BACK: (c) => `🔥 I'M BACK\n\nChallenge "${c.title}" ของผมยังไม่จบ\n\n❤️ ใครช่วยดันผมกลับมาบ้าง`,
-  COMPLETE: (c) => `🏆 DARUMA COMPLETED\n\n${c.title}\n\n❤️ ขอบคุณทุกคนที่ช่วยเชียร์`,
+  START: (c) => `🌱 ปลูกต้นกล้าใหม่แล้ว\n\nผมรับคำท้านี้: ${c.title}\n\n❤️ มาช่วยเชียร์กันหน่อย`,
+  PROGRESS: (c) => `🌱 กำลังดูแลต้นนี้อยู่: ${c.title}\n\n❤️ มาช่วยเชียร์กันหน่อย`,
+  MILESTONE: (c) => `🌿 โตขึ้นอีกขั้นแล้วใน ${c.title}\n\n❤️ มาช่วยเชียร์กันหน่อย`,
+  IM_BACK: (c) => `🌱 กลับมาแล้ว\n\nต้นนี้ยังไม่ตาย — ${c.title} ของผมยังไปต่อ\n\n❤️ ใครช่วยดันผมกลับมาบ้าง`,
+  COMPLETE: (c) => `🍃 ได้ใบไม้ใหม่ 1 ใบ!\n\n${c.title} — ทำสำเร็จแล้ว\n\n❤️ ขอบคุณทุกคนที่ช่วยเชียร์`,
 };
 
 /** FR14.1/AC: บันทึก share_cards row ทุกครั้งที่ trigger แม้ผู้ใช้จะปิด native share sheet ทิ้ง */

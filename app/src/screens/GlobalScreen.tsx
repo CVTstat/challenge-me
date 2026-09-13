@@ -51,7 +51,7 @@ export default function GlobalScreen() {
           <Text style={styles.cardReward}>🎁 {item.reward_text}</Text>
           {item.has_limited_daruma ? (
             <Text style={styles.cardBadge}>
-              🔴 Limited Daruma {item.limited_daruma_claimed}/{item.limited_daruma_total}
+              🍃 ใบไม้พิเศษ (Limited) {item.limited_daruma_claimed}/{item.limited_daruma_total}
             </Text>
           ) : null}
         </Pressable>

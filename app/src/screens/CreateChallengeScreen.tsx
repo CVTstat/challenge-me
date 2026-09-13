@@ -68,7 +68,7 @@ export default function CreateChallengeScreen() {
       return;
     }
     resetForm();
-    // Flow 2 -> Flow 4: หลังสร้างเสร็จพาไปหน้า First-Eye Ritual
+    // Flow 2 -> Flow 4: หลังสร้างเสร็จพาไปหน้า "เริ่มปลูก" (ต้องกดเองถึงจะเริ่มจริง)
     navigation.navigate("ChallengeDetail", { challengeId: challenge.id });
   }
 

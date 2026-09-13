@@ -8,7 +8,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/providers/AuthProvider";
-import { fillFirstEye, fillSecondEye, submitCheckIn, toggleCheer } from "@/api/challenges";
+import { startGrowing, earnLeaf, submitCheckIn, toggleCheer } from "@/api/challenges";
 import { completeMilestone, computeJourneyProgressPct, listMilestones } from "@/api/lifeChallenge";
 import { getChallengeProgress } from "@/api/progress";
 import type { ProgressSummary } from "@/api/progress";
@@ -19,7 +19,11 @@ import type { ChallengeAttemptRow, ChallengeRow, DarumaRow, MilestoneRow } from 
 
 type Props = { route: RouteProp<RootStackParamList, "ChallengeDetail"> };
 
-// รวม Flow 4 (First-Eye Ritual), Flow 5 (Check-in), Flow 6 (Milestones/Life),
+// ธีม "ต้นไม้แห่งความสำเร็จ": ตาราง daruma ในฐานข้อมูลยังชื่อเดิม แต่ความหมาย
+// ที่แสดงผลเปลี่ยนเป็น — left_eye_filled_at = เริ่มปลูกแล้ว (🌱 กำลังพยายาม),
+// right_eye_filled_at = ทำสำเร็จแล้ว (🍃 ได้ใบไม้ 1 ใบไปติดบนต้นไม้ของเรา)
+//
+// รวม Flow 4 (พิธีเริ่มปลูก), Flow 5 (Check-in), Flow 6 (Milestones/Life),
 // Flow 7 (Cheer), Flow 8 (Supporters entry), Flow 9 (Progress), Flow 10
 // (Push/Rescue), Flow 11 (Completion/Second-Eye), Flow 13 (Not Yet), Flow 14
 // (Ask for Help entry) ไว้ในหน้าเดียวกัน เพราะทั้งหมดอยู่บน [Challenge Home]
@@ -30,7 +34,7 @@ export default function ChallengeDetailScreen() {
   const { session } = useAuth();
 
   const [challenge, setChallenge] = useState<ChallengeRow | null>(null);
-  const [daruma, setDaruma] = useState<DarumaRow | null>(null);
+  const [growth, setGrowth] = useState<DarumaRow | null>(null);
   const [attempt, setAttempt] = useState<ChallengeAttemptRow | null>(null);
   const [cheerCount, setCheerCount] = useState(0);
   const [milestones, setMilestones] = useState<MilestoneRow[]>([]);
@@ -42,7 +46,7 @@ export default function ChallengeDetailScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: challengeRow }, { data: darumaRow }, { data: attemptRow }, { count }] = await Promise.all([
+    const [{ data: challengeRow }, { data: growthRow }, { data: attemptRow }, { count }] = await Promise.all([
       supabase.from("challenges").select("*").eq("id", params.challengeId).single(),
       supabase
         .from("daruma")
@@ -62,7 +66,7 @@ export default function ChallengeDetailScreen() {
     ]);
 
     setChallenge(challengeRow as ChallengeRow);
-    setDaruma(darumaRow as DarumaRow);
+    setGrowth(growthRow as DarumaRow);
     setAttempt(attemptRow as ChallengeAttemptRow);
     setCheerCount(count ?? 0);
 
@@ -91,23 +95,24 @@ export default function ChallengeDetailScreen() {
     }, [load])
   );
 
-  async function handleFillFirstEye() {
+  async function handleStartGrowing() {
     setBusy(true);
-    const { error } = await fillFirstEye(params.challengeId);
+    const { error } = await startGrowing(params.challengeId);
     setBusy(false);
-    if (error) showAlert("เติมตาแรกไม่สำเร็จ", error);
+    if (error) showAlert("เริ่มปลูกไม่สำเร็จ", error);
     else {
       if (challenge) await generateAndShareCard(challenge, "START");
       load();
     }
   }
 
-  async function handleFillSecondEye() {
+  async function handleEarnLeaf() {
     setBusy(true);
-    const { error } = await fillSecondEye(params.challengeId);
+    const { error } = await earnLeaf(params.challengeId);
     setBusy(false);
-    if (error) showAlert("เติมตาที่สองไม่สำเร็จ", error);
+    if (error) showAlert("บันทึกความสำเร็จไม่สำเร็จ", error);
     else {
+      showAlert("🍃 ได้ใบไม้ใหม่ 1 ใบ!", "ต้นไม้ของคุณเขียวขึ้นอีกนิด — ไปดูได้ที่แท็บ Me");
       if (challenge) await generateAndShareCard(challenge, "COMPLETE");
       load();
     }
@@ -199,7 +204,7 @@ export default function ChallengeDetailScreen() {
     }
   }
 
-  if (loading || !challenge || !daruma) {
+  if (loading || !challenge || !growth) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
@@ -208,13 +213,14 @@ export default function ChallengeDetailScreen() {
   }
 
   const isOwner = session?.user?.id === challenge.owner_id;
-  const darumaEmoji = daruma.right_eye_filled_at ? "👁️👁️" : daruma.left_eye_filled_at ? "👁️◯" : "◯◯";
+  // 🍃 = ได้ใบไม้แล้ว (สำเร็จ) · 🌱 = เริ่มปลูกแล้ว กำลังพยายาม · 🌰 = ยังไม่เริ่ม
+  const treeEmoji = growth.right_eye_filled_at ? "🍃" : growth.left_eye_filled_at ? "🌱" : "🌰";
   const journeyPct = challenge.type === "LIFE" ? computeJourneyProgressPct(milestones) : null;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.darumaStatus}>
-        🔴 {darumaEmoji} {challenge.status}
+      <Text style={styles.treeStatus}>
+        {treeEmoji} {challenge.status}
       </Text>
       <Text style={styles.title}>{challenge.title}</Text>
       <Text style={styles.goal}>{challenge.goal_description}</Text>
@@ -314,18 +320,21 @@ export default function ChallengeDetailScreen() {
         </View>
       )}
 
-      {/* Flow 4: First-Eye Ritual — ต้องกดเองเท่านั้น (FR7.1) */}
-      {!daruma.left_eye_filled_at && (
+      {/* Flow 4: พิธี "เริ่มปลูก" — ต้องกดเองเท่านั้น (FR7.1) */}
+      {!growth.left_eye_filled_at && (
         <View style={styles.ritualBox}>
-          <Text style={styles.ritualText}>เมื่อพร้อมจะเริ่ม เติมตาข้างแรกให้ Daruma</Text>
-          <Pressable style={styles.primaryButton} onPress={handleFillFirstEye} disabled={busy}>
-            <Text style={styles.primaryButtonText}>👁️ เติมตาข้างแรก</Text>
+          <Text style={styles.ritualText}>
+            เมื่อพร้อมจะเริ่มจริง ๆ กดปลูกต้นกล้าของ Challenge นี้{"\n"}
+            ทำสำเร็จเมื่อไหร่ จะได้ใบไม้ 1 ใบไปติดบนต้นไม้ของคุณ 🍃
+          </Text>
+          <Pressable style={styles.growButton} onPress={handleStartGrowing} disabled={busy}>
+            <Text style={styles.primaryButtonText}>🌱 เริ่มปลูก</Text>
           </Pressable>
         </View>
       )}
 
-      {/* Flow 5: Check-in — เปิดใช้หลังเติมตาแรกแล้วเท่านั้น */}
-      {daruma.left_eye_filled_at && !daruma.right_eye_filled_at && challenge.type === "PERSONAL" && (
+      {/* Flow 5: Check-in — เปิดใช้หลังเริ่มปลูกแล้วเท่านั้น */}
+      {growth.left_eye_filled_at && !growth.right_eye_filled_at && challenge.type === "PERSONAL" && (
         <View style={styles.section}>
           <Pressable style={styles.primaryButton} onPress={handleCheckIn} disabled={busy}>
             <Text style={styles.primaryButtonText}>✓ CHECK IN TODAY</Text>
@@ -340,14 +349,14 @@ export default function ChallengeDetailScreen() {
           </Pressable>
 
           {/* Flow 11: ปกติจะ trigger จากเงื่อนไขถึงเป้าหมายอัตโนมัติ —
-              ใส่ปุ่ม manual ไว้ demo การเติมตาที่สอง (FR15.2: ต้องกดเองเสมอ) */}
-          <Pressable style={styles.secondaryButton} onPress={handleFillSecondEye} disabled={busy}>
-            <Text style={styles.secondaryButtonText}>🏆 ทำสำเร็จแล้ว — เติมตาข้างที่สอง</Text>
+              ใส่ปุ่ม manual ไว้ให้กดรับใบไม้เอง (FR15.2: ต้องกดเองเสมอ) */}
+          <Pressable style={styles.leafButton} onPress={handleEarnLeaf} disabled={busy}>
+            <Text style={styles.leafButtonText}>🍃 ทำสำเร็จแล้ว — รับใบไม้ 1 ใบ</Text>
           </Pressable>
         </View>
       )}
 
-      {daruma.left_eye_filled_at && !daruma.right_eye_filled_at && challenge.type === "LIFE" && (
+      {growth.left_eye_filled_at && !growth.right_eye_filled_at && challenge.type === "LIFE" && (
         <View style={styles.section}>
           <Pressable style={styles.secondaryButton} onPress={handleCheer}>
             <Text style={styles.secondaryButtonText}>❤️ Cheer ({cheerCount})</Text>
@@ -358,9 +367,12 @@ export default function ChallengeDetailScreen() {
         </View>
       )}
 
-      {daruma.right_eye_filled_at && (
+      {growth.right_eye_filled_at && (
         <View style={styles.completedBox}>
-          <Text style={styles.completedText}>🏆 YOU DID IT. ครั้งหนึ่งคุณเคยบอกว่าจะทำ และคุณทำสำเร็จ</Text>
+          <Text style={styles.completedEmoji}>🍃</Text>
+          <Text style={styles.completedText}>
+            ใบไม้ใบนี้เป็นของคุณแล้ว{"\n"}ครั้งหนึ่งคุณเคยบอกว่าจะทำ และคุณทำสำเร็จ
+          </Text>
         </View>
       )}
 
@@ -396,7 +408,7 @@ export default function ChallengeDetailScreen() {
 const styles = StyleSheet.create({
   container: { padding: 20, gap: 8 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  darumaStatus: { fontSize: 14, color: "#888" },
+  treeStatus: { fontSize: 14, color: "#888" },
   title: { fontSize: 24, fontWeight: "700", marginTop: 4 },
   goal: { fontSize: 15, color: "#555", marginTop: 4 },
   reward: { fontSize: 14, color: "#b45309", marginTop: 8 },
@@ -419,15 +431,21 @@ const styles = StyleSheet.create({
   milestoneTitle: { flex: 1, fontSize: 15 },
   milestoneComplete: { color: "#e11d48", fontWeight: "600" },
   ritualBox: { marginTop: 24, alignItems: "center", gap: 12 },
-  ritualText: { textAlign: "center", color: "#555" },
+  ritualText: { textAlign: "center", color: "#555", lineHeight: 22 },
+  // ปุ่มที่เกี่ยวกับการปลูก/ใบไม้ใช้สีเขียว (โต/สำเร็จ) ส่วนสีแดงเดิมยังเป็น
+  // สีของการลงมือทำประจำวัน เช่น check-in — แยกความหมายกันชัด ๆ
+  growButton: { backgroundColor: "#2e7d32", borderRadius: 8, padding: 14, alignSelf: "stretch" },
+  leafButton: { borderWidth: 1, borderColor: "#2e7d32", backgroundColor: "#f4f8f1", borderRadius: 8, padding: 12 },
+  leafButtonText: { color: "#2e7d32", textAlign: "center", fontWeight: "700" },
   section: { marginTop: 24, gap: 12 },
   primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 14 },
   primaryButtonText: { color: "white", textAlign: "center", fontWeight: "700", fontSize: 16 },
   secondaryButton: { borderWidth: 1, borderColor: "#e11d48", borderRadius: 8, padding: 12 },
   notYetButton: { flex: 1 },
   secondaryButtonText: { color: "#e11d48", textAlign: "center", fontWeight: "600" },
-  completedBox: { marginTop: 24, backgroundColor: "#fff7ed", borderRadius: 12, padding: 16 },
-  completedText: { textAlign: "center", fontWeight: "600" },
+  completedBox: { marginTop: 24, backgroundColor: "#f4f8f1", borderRadius: 12, padding: 20, alignItems: "center" },
+  completedEmoji: { fontSize: 34, marginBottom: 6 },
+  completedText: { textAlign: "center", fontWeight: "600", color: "#2e7d32", lineHeight: 22 },
   linksSection: { marginTop: 32, gap: 10, paddingBottom: 20 },
   linkButton: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
   linkButtonText: { textAlign: "center", fontWeight: "600", color: "#333" },

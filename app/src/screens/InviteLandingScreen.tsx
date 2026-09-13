@@ -91,14 +91,14 @@ export default function InviteLandingScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.badge}>🎯 คำท้าจาก {preview.inviter_display_name}</Text>
+      <Text style={styles.badge}>🌱 คำท้าจาก {preview.inviter_display_name}</Text>
       <Text style={styles.title}>{preview.title}</Text>
       <Text style={styles.goal}>{preview.goal_description}</Text>
       {preview.reward_text ? <Text style={styles.reward}>🎁 {preview.reward_text}</Text> : null}
 
       <Pressable style={styles.primaryButton} onPress={handleAccept} disabled={busy}>
         <Text style={styles.primaryButtonText}>
-          {session?.user ? "🔥 รับคำท้า — เริ่มทำเลย" : "สมัครสมาชิกเพื่อรับคำท้า"}
+          {session?.user ? "🌱 รับคำท้า — เริ่มปลูกเลย" : "สมัครสมาชิกเพื่อรับคำท้า"}
         </Text>
       </Pressable>
       <Pressable style={styles.secondaryButton} onPress={handleSkip}>
