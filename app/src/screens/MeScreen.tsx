@@ -102,7 +102,7 @@ export default function MeScreen() {
           onPress={() => navigation.navigate("ChallengeDetail", { challengeId: item.challenge_id })}
         >
           {/* ดารุมะประจำ Challenge แต่ละอัน — เห็นได้ทันทีว่าตัวไหนยังค้างตาอยู่ */}
-          <DarumaCanvas eyes={darumaEyesFrom(item.left_eye_filled_at, item.right_eye_filled_at)} width={34} />
+          <DarumaCanvas eyes={darumaEyesFrom(item.left_eye_filled_at, item.right_eye_filled_at)} width={44} />
           <Text style={styles.rowTitle}>{item.challenges?.title ?? "-"}</Text>
           {!item.left_eye_filled_at && <Text style={styles.rowHint}>แตะเพื่อเติมตาแรก →</Text>}
         </Pressable>
