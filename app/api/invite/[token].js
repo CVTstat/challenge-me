@@ -7,6 +7,27 @@
 // รับ path: /invite/:token  (ดู vercel.json rewrite -> /api/invite/:token)
 // คนจริงที่เห็นหน้านี้จะกดปุ่มแล้วเข้าแอปตัวจริงที่ /?invite=:token ต่อ
 
+// ────────────────────────────────────────────────────────────────────────────
+// เวอร์ชันของรูปปก (og:image) — สำคัญมาก อย่าตัดออก
+//
+// ปัญหาที่เจอจริง: ตอนเปลี่ยนรูปปกจากลายเดิมเป็นรูปดารุมะ โค้ดกับข้อความ
+// อัปเดตขึ้นเว็บเรียบร้อย แต่ Facebook ยังโชว์รูป "เดิม" อยู่ ถึงจะกดสเครปใหม่
+// ก็ไม่เปลี่ยน สาเหตุคือ URL ของรูปเป็น /api/og-cover เฉย ๆ ไม่เคยเปลี่ยนเลย
+// และตัวไฟล์ถูกส่งมาพร้อม header "immutable" (บอกว่าห้ามโหลดซ้ำ) ทั้ง CDN ของ
+// Vercel และตัวเก็บรูปของ Facebook จึงหยิบไฟล์เก่าที่แคชไว้มาใช้ต่อไปเรื่อย ๆ
+//
+// ทางแก้: ผูกลายนิ้วมือของไฟล์รูป (hash) ไว้ท้าย URL — พอเปลี่ยนรูปเมื่อไหร่
+// URL จะเปลี่ยนตามเอง แคชเก่าจึงใช้ไม่ได้ ต้องไปโหลดรูปใหม่มาเสมอ
+// (ถ้าอ่านไฟล์ไม่ได้ด้วยเหตุใดก็ตาม จะใช้ค่าคงที่สำรองแทน ไม่ทำให้หน้าพัง)
+// ────────────────────────────────────────────────────────────────────────────
+let OG_IMAGE_VERSION = "daruma1";
+try {
+  const buf = require("fs").readFileSync(require("path").join(__dirname, "..", "_assets", "og-cover.png"));
+  OG_IMAGE_VERSION = require("crypto").createHash("md5").update(buf).digest("hex").slice(0, 10);
+} catch {
+  // ใช้ค่าคงที่สำรอง — ก็ยังต่างจาก URL เดิมที่ไม่มีเวอร์ชันเลย จึงยังล้างแคชได้
+}
+
 function escapeHtml(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -70,7 +91,7 @@ module.exports = async function handler(req, res) {
   const goal = escapeHtml(preview.goal_description);
   const category = preview.category ? escapeHtml(preview.category) : null;
   const reward = preview.reward_text ? escapeHtml(preview.reward_text) : null;
-  const ogImageUrl = `${siteOrigin}/api/og-cover`;
+  const ogImageUrl = `${siteOrigin}/api/og-cover?v=${OG_IMAGE_VERSION}`;
 
   // ทำ og:title / og:description ให้ดูน่าสนใจ + มีรายละเอียดครบ (หมวด/เป้าหมาย/
   // รางวัล) เพราะอันนี้คือสิ่งที่ขึ้นจริงตอนแชร์ลง Facebook/LINE ฯลฯ — ยิ่งมี
