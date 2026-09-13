@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
-import { showAlert } from "@/lib/alert";
+import { showAlert, showConfirm } from "@/lib/alert";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -8,7 +8,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/providers/AuthProvider";
-import { startGrowing, earnLeaf, setChallengeTarget, submitCheckIn, toggleCheer } from "@/api/challenges";
+import { startGrowing, earnLeaf, deleteChallenge, setChallengeTarget, submitCheckIn, toggleCheer } from "@/api/challenges";
 import { completeMilestone, computeJourneyProgressPct, listMilestones } from "@/api/lifeChallenge";
 import { getChallengeProgress } from "@/api/progress";
 import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
@@ -237,6 +237,29 @@ export default function ChallengeDetailScreen() {
       setTargetInput("");
       load();
     }
+  }
+
+  // ลบ Challenge — ย้อนกลับไม่ได้ จึงต้องยืนยันก่อนเสมอ และถ้าทำสำเร็จไปแล้ว
+  // ต้องเตือนให้ชัดว่าใบไม้บนต้นไม้จะหายไปด้วย (ใบไม้นับจาก Challenge ที่สำเร็จ)
+  async function handleDelete() {
+    if (!challenge) return;
+    const earnedLeaf = !!growth?.right_eye_filled_at;
+    const warning = earnedLeaf
+      ? `ใบไม้ที่ได้จาก Challenge นี้จะหายไปจากต้นไม้ของคุณอย่างถาวรด้วย\n\nรวมถึงประวัติ check-in ทั้งหมด คำเชิญ และกำลังใจที่เพื่อนเคยส่งมา — ทั้งหมดนี้กู้คืนไม่ได้`
+      : `ประวัติ check-in ทั้งหมด คำเชิญ และกำลังใจที่เพื่อนเคยส่งมาจะถูกลบไปด้วย — กู้คืนไม่ได้`;
+
+    const ok = await showConfirm(`ลบ "${challenge.title}" ?`, warning, "ลบเลย", "เก็บไว้ก่อน");
+    if (!ok) return;
+
+    setBusy(true);
+    const { error } = await deleteChallenge(params.challengeId);
+    setBusy(false);
+    if (error) {
+      showAlert("ลบไม่สำเร็จ", error);
+      return;
+    }
+    showAlert("ลบแล้ว", `"${challenge.title}" ถูกลบออกจากแอปเรียบร้อย`);
+    navigation.popToTop();
   }
 
   async function handleCompleteMilestone(milestoneId: string) {
@@ -551,6 +574,14 @@ export default function ChallengeDetailScreen() {
         >
           <Text style={styles.linkButtonText}>❤️ ขอความช่วยเหลือ</Text>
         </Pressable>
+
+        {/* ปุ่มลบ — วางท้ายสุด แยกจากปุ่มอื่นชัดเจน และต้องยืนยันก่อนถึงจะลบจริง
+            เพราะเป็นการกระทำที่ย้อนกลับไม่ได้ */}
+        {isOwner && (
+          <Pressable style={styles.deleteButton} onPress={handleDelete} disabled={busy}>
+            <Text style={styles.deleteButtonText}>🗑️ ลบ Challenge นี้</Text>
+          </Pressable>
+        )}
       </View>
     </ScrollView>
   );
@@ -619,4 +650,6 @@ const styles = StyleSheet.create({
   linksSection: { marginTop: 32, gap: 10, paddingBottom: 20 },
   linkButton: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
   linkButtonText: { textAlign: "center", fontWeight: "600", color: "#333" },
+  deleteButton: { marginTop: 18, padding: 12 },
+  deleteButtonText: { textAlign: "center", fontWeight: "600", color: "#b0b0aa", fontSize: 13 },
 });

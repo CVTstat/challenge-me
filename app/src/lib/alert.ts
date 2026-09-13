@@ -14,3 +14,29 @@ export function showAlert(title: string, message?: string) {
   }
   Alert.alert(title, message);
 }
+
+/**
+ * กล่องยืนยันก่อนทำสิ่งที่ย้อนกลับไม่ได้ (เช่น ลบ Challenge)
+ * คืนค่า true เมื่อผู้ใช้กดยืนยัน — ด้วยเหตุผลเดียวกับ showAlert คือบนเว็บต้อง
+ * ใช้ window.confirm เพราะ Alert ของ React Native ใช้ไม่ได้จริงบน react-native-web
+ */
+export function showConfirm(
+  title: string,
+  message: string,
+  confirmLabel = "ยืนยัน",
+  cancelLabel = "ยกเลิก"
+): Promise<boolean> {
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined" && typeof window.confirm === "function") {
+      return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+    }
+    // ไม่มี confirm ให้ใช้ — ถือว่าไม่ยืนยัน ปลอดภัยกว่าเผลอลบ
+    return Promise.resolve(false);
+  }
+  return new Promise((resolve) => {
+    Alert.alert(title, message, [
+      { text: cancelLabel, style: "cancel", onPress: () => resolve(false) },
+      { text: confirmLabel, style: "destructive", onPress: () => resolve(true) },
+    ]);
+  });
+}

@@ -190,6 +190,29 @@ export async function toggleCheer(challengeId: string, userId: string) {
   return { cheered: !error, error: error?.message ?? null };
 }
 
+/**
+ * ลบ Challenge ที่ตัวเองสร้าง (ฟีเจอร์ตามที่ผู้ใช้ขอ)
+ *
+ * ข้อมูลที่ผูกอยู่ทั้งหมด (daruma, check-in, cheer, milestone, คำเชิญ ฯลฯ) ถูก
+ * ประกาศเป็น on delete cascade ไว้แล้วตั้งแต่ schema แรก จึงถูกลบตามไปเอง
+ *
+ * สำคัญ: ต้องเช็คจำนวนแถวที่ถูกลบจริงด้วย ห้ามเช็คแค่ error — เพราะถ้า RLS
+ * บล็อกการลบไว้ (ยังไม่ได้รัน migration 0009) Postgres จะไม่คืน error มาเลย
+ * แต่จะลบ 0 แถวเงียบ ๆ ทำให้แอปหลงคิดว่าลบสำเร็จทั้งที่ข้อมูลยังอยู่ครบ
+ * จึงใช้ .select() เพื่อดูว่ามีแถวถูกลบกลับมาจริงไหม
+ */
+export async function deleteChallenge(challengeId: string) {
+  const { data, error } = await supabase.from("challenges").delete().eq("id", challengeId).select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return {
+      error:
+        "ลบไม่สำเร็จ — ฐานข้อมูลยังไม่อนุญาตให้ลบ กรุณารัน SQL ของ migration 0009 ใน Supabase ก่อน (หรือ Challenge นี้อาจไม่ใช่ของคุณ)",
+    };
+  }
+  return { error: null };
+}
+
 /** Home tab / Flow 18: Challenge ที่ active ของผู้ใช้ */
 export async function listMyActiveChallenges(userId: string) {
   const { data, error } = await supabase
