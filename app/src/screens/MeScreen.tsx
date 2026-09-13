@@ -8,6 +8,12 @@ import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import type { DarumaRow, ProfileRow } from "@/types/database";
 
+// หมายเหตุ (แก้บั๊ก): Challenge ที่เพิ่งสร้างจะยังเป็นสถานะ "แบบร่าง" (DRAFT) —
+// ยังไม่โผล่ในแท็บ Home จนกว่าจะกด "เปิดตาแรก" (First-Eye Ritual) ที่หน้า
+// รายละเอียด Challenge ก่อน แต่เดิมหน้านี้ไม่มีทางกดเข้าไปที่ Challenge ที่ค้าง
+// อยู่แบบนี้เลย (กดที่รายการ Daruma ไม่มีอะไรเกิดขึ้น) — เพิ่ม onPress ให้กด
+// เข้าไปที่หน้ารายละเอียดได้ จะได้ไปกด "เปิดตาแรก" ต่อได้
+
 // Flow 12 (USER-FLOWS.md §12) — [Me] > My Daruma + Profile
 export default function MeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -48,10 +54,16 @@ export default function MeScreen() {
         data={darumas}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.darumaRow}>
-            <Text style={styles.darumaEmoji}>{item.right_eye_filled_at ? "👁️👁️" : "👁️◯"}</Text>
+          <Pressable
+            style={styles.darumaRow}
+            onPress={() => navigation.navigate("ChallengeDetail", { challengeId: item.challenge_id })}
+          >
+            <Text style={styles.darumaEmoji}>
+              {item.right_eye_filled_at ? "👁️👁️" : item.left_eye_filled_at ? "👁️◯" : "◯◯"}
+            </Text>
             <Text style={styles.darumaTitle}>{item.challenges?.title ?? "-"}</Text>
-          </View>
+            {!item.left_eye_filled_at && <Text style={styles.darumaHint}>แตะเพื่อเปิดตาแรก →</Text>}
+          </Pressable>
         )}
         ListEmptyComponent={<Text style={styles.empty}>ยังไม่มี Daruma — ไปสร้าง Challenge แรกกันเถอะ</Text>}
       />
@@ -73,7 +85,8 @@ const styles = StyleSheet.create({
   stats: { color: "#666", marginTop: 4 },
   darumaRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
   darumaEmoji: { fontSize: 18 },
-  darumaTitle: { fontSize: 15 },
+  darumaTitle: { fontSize: 15, flex: 1 },
+  darumaHint: { color: "#e11d48", fontSize: 12, fontWeight: "600" },
   empty: { color: "#888", marginTop: 24 },
   linkButton: { marginTop: 16, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
   linkButtonText: { textAlign: "center", fontWeight: "600", color: "#333" },
