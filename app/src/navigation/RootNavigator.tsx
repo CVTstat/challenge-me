@@ -24,6 +24,7 @@ import EditExpertiseScreen from "@/screens/EditExpertiseScreen";
 import InviteFriendScreen from "@/screens/InviteFriendScreen";
 import InviteLandingScreen from "@/screens/InviteLandingScreen";
 import CommunityTreeScreen from "@/screens/CommunityTreeScreen";
+import NotificationsScreen from "@/screens/NotificationsScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -56,6 +57,7 @@ export type RootStackParamList = {
   InviteFriend: { challengeId: string };
   InviteLanding: undefined;
   CommunityTree: undefined; // 🌏 ต้นไม้รวมความสำเร็จของทั้งชุมชน
+  Notifications: undefined; // 🔔 เรื่องที่เกี่ยวข้องกับเรา
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -119,6 +121,7 @@ function sharedDetailScreens() {
       <Stack.Screen name="InviteFriend" component={InviteFriendScreen} options={{ title: "ท้าเพื่อน" }} />
       <Stack.Screen name="InviteLanding" component={InviteLandingScreen} options={{ title: "คำท้า" }} />
       <Stack.Screen name="CommunityTree" component={CommunityTreeScreen} options={{ title: "ต้นไม้ของพวกเรา" }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: "การแจ้งเตือน" }} />
     </>
   );
 }

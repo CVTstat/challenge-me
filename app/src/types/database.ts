@@ -59,6 +59,12 @@ export interface ProfileRow {
   status: "ACTIVE" | "SUSPENDED" | "DELETED";
   created_at: string;
   updated_at: string;
+  // ── เชื่อมกับ LINE (migration 0012) ──
+  // line_user_id แก้จากฝั่งแอปไม่ได้ (มี trigger กันไว้) — เขียนได้เฉพาะ
+  // เซิร์ฟเวอร์หลังยืนยันตัวตนกับ LINE แล้วเท่านั้น
+  line_user_id?: string | null;
+  line_picture_url?: string | null;
+  line_notify_enabled?: boolean;
 }
 
 export interface ChallengeRow {

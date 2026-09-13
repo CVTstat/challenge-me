@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { listMyActiveChallenges } from "@/api/challenges";
 import { listChallengesNeedingPush } from "@/api/push";
 import { getProgressForChallenges } from "@/api/progress";
+import { countUnreadNotifications } from "@/api/notifications";
 import { getTreeStats } from "@/api/tree";
 import type { TreeStats } from "@/api/tree";
 import TreeCanvas, { nextMilestone, TREE_CAPACITY } from "@/components/TreeCanvas";
@@ -32,21 +33,25 @@ export default function HomeScreen() {
   const [tree, setTree] = useState<TreeStats | null>(null);
   const [progress, setProgress] = useState<ProgressMap>({});
   const [displayName, setDisplayName] = useState<string>("");
+  const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
     setLoading(true);
-    const [{ challenges: rows }, { challenges: pushRows }, { stats }, { data: profile }] = await Promise.all([
-      listMyActiveChallenges(session.user.id),
-      listChallengesNeedingPush(session.user.id),
-      getTreeStats(),
-      supabase.from("profiles").select("display_name").eq("id", session.user.id).single(),
-    ]);
+    const [{ challenges: rows }, { challenges: pushRows }, { stats }, { data: profile }, { count }] =
+      await Promise.all([
+        listMyActiveChallenges(session.user.id),
+        listChallengesNeedingPush(session.user.id),
+        getTreeStats(),
+        supabase.from("profiles").select("display_name").eq("id", session.user.id).single(),
+        countUnreadNotifications(session.user.id),
+      ]);
     setChallenges(rows);
     setNeedsPush(pushRows);
     setTree(stats);
     setDisplayName((profile?.display_name as string) ?? "");
+    setUnread(count);
     // ความคืบหน้าของทุก Challenge ดึงทีเดียวหลังรู้ว่ามี Challenge อะไรบ้าง
     const { progress: map } = await getProgressForChallenges(rows.map((c) => c.id));
     setProgress(map);
@@ -96,6 +101,20 @@ export default function HomeScreen() {
               <Text style={styles.greetHello}>สวัสดี {displayName || "เพื่อน"} 👋</Text>
               <Text style={styles.greetSub}>วันนี้เก่งขึ้นอีกนิดแล้ว</Text>
             </View>
+            {/* กระดิ่งแจ้งเตือน — ตัวเลขแดงคือจำนวนที่ยังไม่ได้อ่าน */}
+            <Pressable
+              style={styles.bell}
+              onPress={() => navigation.navigate("Notifications")}
+              hitSlop={8}
+              accessibilityLabel="การแจ้งเตือน"
+            >
+              <Text style={styles.bellGlyph}>🔔</Text>
+              {unread > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unread > 9 ? "9+" : unread}</Text>
+                </View>
+              )}
+            </Pressable>
           </View>
 
           {/* การ์ดต้นไม้ของฉัน */}
@@ -198,6 +217,32 @@ const styles = StyleSheet.create({
   greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
   greetHello: { fontSize: font.h3, fontWeight: "800", color: colors.text },
   greetSub: { fontSize: font.small, color: colors.textMuted, marginTop: 1 },
+  bell: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellGlyph: { fontSize: 19 },
+  badge: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    minWidth: 20,
+    height: 20,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+    borderWidth: 2,
+    borderColor: colors.bg,
+  },
+  badgeText: { color: colors.onPrimary, fontSize: 10, fontWeight: "800" },
 
   treeCard: { paddingVertical: spacing.lg },
   treeRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },

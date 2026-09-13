@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Image } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -26,6 +27,10 @@ export default function MeScreen() {
   const { session, signOut } = useAuth();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [darumas, setDarumas] = useState<(DarumaRow & { challenges: { title: string } | null })[]>([]);
+  // แก้ชื่อที่แสดงในแอปได้ — ชื่อเริ่มต้นมาจาก LINE ถ้าเข้าผ่าน LINE
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -46,6 +51,29 @@ export default function MeScreen() {
     }, [load])
   );
 
+  function startEditingName() {
+    setNameDraft(profile?.display_name ?? "");
+    setEditingName(true);
+  }
+
+  async function handleSaveName() {
+    if (!session?.user) return;
+    const name = nameDraft.trim();
+    if (!name) {
+      showAlert("ใส่ชื่อก่อน", "ชื่อที่แสดงว่างไม่ได้");
+      return;
+    }
+    setSavingName(true);
+    const { error } = await supabase.from("profiles").update({ display_name: name }).eq("id", session.user.id);
+    setSavingName(false);
+    if (error) {
+      showAlert("เปลี่ยนชื่อไม่สำเร็จ", error.message);
+      return;
+    }
+    setEditingName(false);
+    load();
+  }
+
   const leaves = darumas.filter((d) => d.right_eye_filled_at).length;
   const growing = darumas.filter((d) => d.left_eye_filled_at && !d.right_eye_filled_at).length;
   const seeds = darumas.filter((d) => !d.left_eye_filled_at).length;
@@ -56,11 +84,39 @@ export default function MeScreen() {
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
     >
-      {/* หัวโปรไฟล์ */}
+      {/* หัวโปรไฟล์ — รูปจาก LINE ถ้ามี ไม่งั้นใช้ตัวอักษรแรกของชื่อ */}
       <View style={styles.profileRow}>
-        <Avatar name={profile?.display_name} size={62} />
+        {profile?.line_picture_url ? (
+          <Image source={{ uri: profile.line_picture_url }} style={styles.avatarImage} />
+        ) : (
+          <Avatar name={profile?.display_name} size={62} />
+        )}
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{profile?.display_name ?? "..."}</Text>
+          {editingName ? (
+            <View style={styles.nameEditRow}>
+              <TextInput
+                style={styles.nameInput}
+                value={nameDraft}
+                onChangeText={setNameDraft}
+                placeholder="ชื่อที่แสดงในแอป"
+                placeholderTextColor={colors.textFaint}
+                autoFocus
+                maxLength={40}
+              />
+              <Pressable onPress={handleSaveName} disabled={savingName} hitSlop={8}>
+                <Text style={styles.nameSave}>{savingName ? "..." : "บันทึก"}</Text>
+              </Pressable>
+              <Pressable onPress={() => setEditingName(false)} hitSlop={8}>
+                <Text style={styles.nameCancel}>ยกเลิก</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable onPress={startEditingName} hitSlop={6}>
+              <Text style={styles.name}>
+                {profile?.display_name ?? "..."} <Text style={styles.editHint}>แก้ไข</Text>
+              </Text>
+            </Pressable>
+          )}
           <Text style={styles.motto}>เล็ก ๆ ทุกวัน เปลี่ยนคุณได้</Text>
         </View>
       </View>
@@ -134,7 +190,23 @@ const styles = StyleSheet.create({
 
   profileRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
   name: { fontSize: font.h2, fontWeight: "800", color: colors.text },
+  editHint: { fontSize: font.tiny, color: colors.primary, fontWeight: "700" },
   motto: { fontSize: font.small, color: colors.textMuted, marginTop: 2 },
+  avatarImage: { width: 62, height: 62, borderRadius: 31, backgroundColor: colors.primarySoft },
+  nameEditRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  nameInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    fontSize: font.body,
+    color: colors.text,
+  },
+  nameSave: { color: colors.primary, fontWeight: "800", fontSize: font.small },
+  nameCancel: { color: colors.textFaint, fontWeight: "600", fontSize: font.small },
 
   statRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg },
 
