@@ -11,6 +11,12 @@ import { useAuth } from "@/providers/AuthProvider";
 import { startGrowing, earnLeaf, setChallengeTarget, submitCheckIn, toggleCheer } from "@/api/challenges";
 import { completeMilestone, computeJourneyProgressPct, listMilestones } from "@/api/lifeChallenge";
 import { getChallengeProgress } from "@/api/progress";
+import {
+  checkInLabel,
+  isAccumulative,
+  progressSummaryText,
+  remainingText,
+} from "@/lib/measurement";
 import type { ProgressSummary } from "@/api/progress";
 import { acknowledgeImBack, pushChallenge } from "@/api/push";
 import { generateAndShareCard } from "@/api/share";
@@ -44,6 +50,7 @@ export default function ChallengeDetailScreen() {
   const [changeGoalMode, setChangeGoalMode] = useState(false);
   const [newGoalText, setNewGoalText] = useState("");
   const [targetInput, setTargetInput] = useState("");
+  const [checkInValue, setCheckInValue] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,12 +127,31 @@ export default function ChallengeDetailScreen() {
   }
 
   async function handleCheckIn() {
-    if (!attempt) return;
+    if (!attempt || !challenge) return;
+
+    // Challenge ที่วัดด้วยตัวเลขสะสม (ระยะทาง/เวลา/จำนวน) ต้องกรอกตัวเลขของ
+    // วันนั้นมาด้วย ไม่ใช่แค่กดว่า "ทำได้" — ไม่งั้นจะไม่รู้ว่าสะสมไปเท่าไหร่แล้ว
+    const numeric = isAccumulative(challenge.measurement_type);
+    let valueNumber: number | undefined;
+    if (numeric) {
+      const n = Number(checkInValue.trim());
+      if (!Number.isFinite(n) || n <= 0) {
+        showAlert("ใส่ตัวเลขก่อน", `กรอกว่าวันนี้ทำได้เท่าไหร่ (${challenge.measurement_unit || "หน่วย"})`);
+        return;
+      }
+      valueNumber = n;
+    }
+
     setBusy(true);
-    const { error } = await submitCheckIn({ challengeAttemptId: attempt.id, valueBool: true });
+    const { error } = await submitCheckIn({
+      challengeAttemptId: attempt.id,
+      valueBool: numeric ? undefined : true,
+      valueNumber,
+    });
     setBusy(false);
     if (error) showAlert("Check-in ไม่สำเร็จ", error);
     else {
+      setCheckInValue("");
       showAlert("✓ Check-in วันนี้บันทึกแล้ว");
       load();
     }
@@ -241,7 +267,11 @@ export default function ChallengeDetailScreen() {
   // LIFE:     ต้องทำ Milestone ครบทุกข้อ
   // ถ้ายังไม่ครบ ปุ่มจะไม่ขึ้นเลย — เห็นแค่ว่าเหลืออีกเท่าไหร่
   const target = challenge.target_value ?? null;
-  const doneCount = progress?.totalCheckIns ?? 0;
+  const numericMeasure = isAccumulative(challenge.measurement_type);
+  const unit = challenge.measurement_unit ?? "";
+  // วัดแบบ Yes/No → นับ "จำนวนครั้งที่ check-in"
+  // วัดแบบตัวเลขสะสม → รวม "ตัวเลขที่กรอกไว้ทุกครั้ง" (เช่น กม. ที่วิ่งสะสม)
+  const doneCount = numericMeasure ? (progress?.totalValue ?? 0) : (progress?.totalCheckIns ?? 0);
   const remaining = target !== null ? Math.max(0, target - doneCount) : null;
   const targetPct = target ? Math.min(100, Math.round((doneCount / target) * 100)) : 0;
   const allMilestonesDone = milestones.length > 0 && milestones.every((m) => m.status === "DONE");
@@ -332,7 +362,7 @@ export default function ChallengeDetailScreen() {
           {target !== null && (
             <>
               <Text style={styles.progressLine}>
-                🎯 ทำไปแล้ว {doneCount} / {target} ครั้ง ({targetPct}%)
+                🎯 {progressSummaryText(challenge.measurement_type, unit, doneCount, target)} ({targetPct}%)
               </Text>
               <View style={styles.barTrack}>
                 <View style={[styles.barFill, { flex: targetPct }]} />
@@ -377,9 +407,28 @@ export default function ChallengeDetailScreen() {
       {/* Flow 5: Check-in — เปิดใช้หลังเริ่มปลูกแล้วเท่านั้น */}
       {growth.left_eye_filled_at && !growth.right_eye_filled_at && challenge.type === "PERSONAL" && (
         <View style={styles.section}>
-          <Pressable style={styles.primaryButton} onPress={handleCheckIn} disabled={busy}>
-            <Text style={styles.primaryButtonText}>✓ CHECK IN TODAY</Text>
-          </Pressable>
+          {numericMeasure ? (
+            <View style={styles.checkInBox}>
+              <Text style={styles.checkInLabel}>{checkInLabel(challenge.measurement_type, unit)}</Text>
+              <View style={styles.checkInRow}>
+                <TextInput
+                  style={styles.checkInInput}
+                  placeholder="เช่น 3"
+                  value={checkInValue}
+                  onChangeText={setCheckInValue}
+                  keyboardType="decimal-pad"
+                />
+                {unit ? <Text style={styles.checkInUnit}>{unit}</Text> : null}
+              </View>
+              <Pressable style={styles.primaryButton} onPress={handleCheckIn} disabled={busy}>
+                <Text style={styles.primaryButtonText}>✓ บันทึกของวันนี้</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable style={styles.primaryButton} onPress={handleCheckIn} disabled={busy}>
+              <Text style={styles.primaryButtonText}>✓ วันนี้ทำได้</Text>
+            </Pressable>
+          )}
 
           <Pressable style={styles.secondaryButton} onPress={handleCheer}>
             <Text style={styles.secondaryButtonText}>❤️ Cheer ({cheerCount})</Text>
@@ -394,15 +443,20 @@ export default function ChallengeDetailScreen() {
               ไม่มีการเติมใบไม้ให้อัตโนมัติ เพราะการกดรับเองคือส่วนหนึ่งของพิธี */}
           {isGoalReached ? (
             <View style={styles.unlockedBox}>
-              <Text style={styles.unlockedText}>🎉 ทำครบ {target} ครั้งแล้ว — ใบไม้ใบนี้เป็นของคุณ</Text>
+              <Text style={styles.unlockedText}>
+                🎉 ครบ {target}
+                {unit ? ` ${unit}` : " ครั้ง"} แล้ว — ใบไม้ใบนี้เป็นของคุณ
+              </Text>
               <Pressable style={styles.leafButton} onPress={handleEarnLeaf} disabled={busy}>
                 <Text style={styles.leafButtonText}>🍃 ทำสำเร็จแล้ว — รับใบไม้ 1 ใบ</Text>
               </Pressable>
             </View>
           ) : target !== null ? (
             <View style={styles.lockedBox}>
-              <Text style={styles.lockedText}>🔒 อีก {remaining} ครั้ง ถึงจะได้รับใบไม้</Text>
-              <Text style={styles.lockedSub}>ทำครบ {target} ครั้งเมื่อไหร่ ปุ่มรับใบไม้จะขึ้นมาเอง</Text>
+              <Text style={styles.lockedText}>
+                🔒 {remainingText(challenge.measurement_type, unit, remaining ?? 0)}
+              </Text>
+              <Text style={styles.lockedSub}>ครบตามเป้าเมื่อไหร่ ปุ่มรับใบไม้จะขึ้นมาเอง</Text>
             </View>
           ) : isOwner ? (
             <View style={styles.lockedBox}>
@@ -525,6 +579,11 @@ const styles = StyleSheet.create({
   growButton: { backgroundColor: "#2e7d32", borderRadius: 8, padding: 14, alignSelf: "stretch" },
   leafButton: { borderWidth: 1, borderColor: "#2e7d32", backgroundColor: "#f4f8f1", borderRadius: 8, padding: 12 },
   leafButtonText: { color: "#2e7d32", textAlign: "center", fontWeight: "700" },
+  checkInBox: { gap: 8 },
+  checkInLabel: { fontWeight: "600", color: "#333" },
+  checkInRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  checkInInput: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, backgroundColor: "white", fontSize: 16 },
+  checkInUnit: { fontSize: 15, color: "#666", fontWeight: "600" },
   // แถบความคืบหน้าเทียบกับเส้นชัย
   barTrack: { flexDirection: "row", height: 8, borderRadius: 999, backgroundColor: "#e6e6e6", overflow: "hidden", marginTop: 6 },
   barFill: { backgroundColor: "#2e7d32", borderRadius: 999 },

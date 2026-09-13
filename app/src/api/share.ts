@@ -9,8 +9,10 @@
 // ส่วนรูปภาพให้ต่อ image-generation service เข้ามาเติม `image_url` ทีหลังได้
 // โดยไม่ต้องแก้ schema หรือ API shape ตรงนี้เลย
 
-import { Share } from "react-native";
 import { supabase } from "@/lib/supabase";
+import { shareContent } from "@/lib/share";
+import { getWebBaseUrl } from "@/lib/config";
+import { buildInviteShareUrl } from "@/api/invites";
 import type { ChallengeRow, ShareCardType } from "@/types/database";
 
 const DEEP_LINK_SCHEME = "challengeme://challenge";
@@ -35,13 +37,26 @@ export async function generateAndShareCard(challenge: ChallengeRow, type: ShareC
   });
   if (insertError) return { error: insertError.message };
 
-  try {
-    await Share.share({
-      message: `${SHARE_COPY[type](challenge)}\n\n${deepLink}`,
-    });
-  } catch (e) {
-    // ผู้ใช้ปิด share sheet เอง หรือ share ไม่สำเร็จ — ไม่ถือเป็น error ของ flow หลัก (FR14.4)
-  }
+  // หมายเหตุ (แก้บั๊ก): เดิมเรียก Share ของ React Native ตรง ๆ ซึ่งบนเว็บไม่
+  // ทำงานเลย (react-native-web ไม่ได้ implement ให้) กดปุ่ม "แชร์ความคืบหน้า"
+  // แล้วจึงเงียบสนิท — เปลี่ยนมาใช้ shareContent ที่เด้ง share sheet ของเครื่อง
+  // ได้จริงทั้งบนเว็บและบนแอป (ดู lib/share.ts)
+  //
+  // และแชร์เป็น "ลิงก์เว็บสาธารณะ" แทน deep link challengeme:// เพราะคนที่รับ
+  // ลิงก์ไปส่วนใหญ่ยังไม่ได้ติดตั้งแอป — ลิงก์ challengeme:// จะเปิดไม่ขึ้นเลย
+  // ส่วนลิงก์เว็บเปิดได้ทุกเครื่อง แถมขึ้นการ์ดพรีวิวสวย ๆ ตอนโพสต์ลง Facebook
+  // (deep_link ยังถูกบันทึกลงตาราง share_cards เหมือนเดิมตาม schema)
+  const webUrl = challenge.public_invite_token
+    ? buildInviteShareUrl(getWebBaseUrl(), challenge.public_invite_token)
+    : deepLink;
+
+  await shareContent({
+    title: "Challenge Me",
+    message: SHARE_COPY[type](challenge),
+    url: webUrl,
+    copiedHint: "วางข้อความนี้ตอนโพสต์ลง Social ได้เลย",
+  });
+  // ผู้ใช้ปิด share sheet เองก็ไม่ถือเป็น error ของ flow หลัก (FR14.4)
 
   return { error: null as string | null };
 }

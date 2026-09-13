@@ -10,6 +10,12 @@ export interface ProgressSummary {
   currentStreak: number;
   bestStreak: number;
   totalCheckIns: number;
+  /**
+   * ผลรวมของตัวเลขที่กรอกไว้ทุก check-in — ใช้กับ Challenge ที่วัดด้วยตัวเลข
+   * สะสม (ระยะทาง/เวลา/จำนวน) เช่น วิ่งสะสมให้ครบ 10 กม. ค่านี้คือ "วิ่งไป
+   * แล้วกี่ กม." ส่วน Challenge แบบ Yes/No จะไม่ใช้ค่านี้ (ใช้ totalCheckIns แทน)
+   */
+  totalValue: number;
   progressPct: number | null; // null ถ้าคำนวณ % ไม่ได้ (เช่นไม่มี planned_end_date)
   checkIns: CheckInRow[];
 }
@@ -59,10 +65,17 @@ export async function getChallengeProgress(challenge: ChallengeRow, attemptId: s
     progressPct = Math.min(100, Math.round((checkIns.length / totalExpectedPeriods) * 100));
   }
 
+  // รวมตัวเลขที่กรอกไว้ทุกครั้ง (ข้ามค่าที่ว่าง/ไม่ใช่ตัวเลข)
+  const totalValue = checkIns.reduce((sum, c) => {
+    const v = Number(c.value_number);
+    return Number.isFinite(v) ? sum + v : sum;
+  }, 0);
+
   const summary: ProgressSummary = {
     currentStreak,
     bestStreak,
     totalCheckIns: checkIns.length,
+    totalValue,
     progressPct,
     checkIns,
   };
