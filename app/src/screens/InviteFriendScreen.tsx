@@ -71,18 +71,28 @@ export default function InviteFriendScreen() {
   async function handleShareLink() {
     if (!shareUrl) return;
     setLinkBusy(true);
-    const text = `🎯 ท้าให้มาทำ Challenge นี้ด้วยกัน! เปิดลิงก์นี้แล้วรับคำท้าได้เลย:\n${shareUrl}`;
+    // หมายเหตุ (แก้บั๊ก): ห้ามใส่ shareUrl ไว้ใน "ข้อความ" (text/message) แล้ว
+    // ส่ง url แยกไปด้วยพร้อมกัน — บาง share target (เช่น LINE ที่เจอปัญหานี้
+    // จริง) จะเอาทั้งสองค่ามาต่อกัน กลายเป็นลิงก์โผล่ซ้ำ 2 รอบในข้อความเดียว
+    // และ LINE ก็จะไม่โชว์การ์ดพรีวิวรูปภาพให้ด้วย (เห็นเป็นข้อความเปล่า ๆ)
+    // เพราะไม่ใช่ "แค่ลิงก์ล้วน ๆ" อีกต่อไป — ให้ข้อความมีแค่คำชวน ส่วนลิงก์
+    // ให้แต่ละแพลตฟอร์ม/แอปจัดการแนบเองแยกต่างหาก จะได้ขึ้นพรีวิวสวย ๆ
+    const caption = "🎯 ท้าให้มาทำ Challenge นี้ด้วยกัน! เปิดลิงก์นี้แล้วรับคำท้าได้เลย";
     try {
       if (Platform.OS === "web") {
         const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
         if (nav?.share) {
-          await nav.share({ title: "Challenge Me", text, url: shareUrl });
+          await nav.share({ title: "Challenge Me", text: caption, url: shareUrl });
         } else if (nav?.clipboard?.writeText) {
           await nav.clipboard.writeText(shareUrl);
           showAlert("คัดลอกลิงก์แล้ว", "วางลิงก์นี้ตอนโพสต์ลง Facebook แล้วพิมพ์ @แท็กเพื่อนที่อยากท้าได้เลย");
         }
+      } else if (Platform.OS === "ios") {
+        // iOS: message กับ url แยกกันได้จริง ไม่ซ้ำกัน
+        await Share.share({ message: caption, url: shareUrl });
       } else {
-        await Share.share({ message: text, url: shareUrl });
+        // Android: RN Share ไม่มี field url แยก ต้องต่อท้ายในข้อความเอง
+        await Share.share({ message: `${caption}\n${shareUrl}` });
       }
     } catch {
       // ผู้ใช้กดยกเลิกกล่องแชร์ — ไม่ต้องแจ้ง error
