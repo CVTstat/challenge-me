@@ -5,6 +5,9 @@
   "functions": {
     "api/invite/[token].js": {
       "maxDuration": 10
+    },
+    "api/og-cover.js": {
+      "maxDuration": 10
     }
   },
   "rewrites": [

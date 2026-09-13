@@ -68,9 +68,20 @@ module.exports = async function handler(req, res) {
   const title = escapeHtml(preview.title);
   const inviter = escapeHtml(preview.inviter_display_name);
   const goal = escapeHtml(preview.goal_description);
+  const category = preview.category ? escapeHtml(preview.category) : null;
   const reward = preview.reward_text ? escapeHtml(preview.reward_text) : null;
-  const ogTitle = `🎯 ${inviter} ท้าให้คุณทำ "${title}"`;
-  const ogDescription = reward ? `${goal} — รางวัล: ${reward}` : goal;
+  const ogImageUrl = `${siteOrigin}/api/og-cover`;
+
+  // ทำ og:title / og:description ให้ดูน่าสนใจ + มีรายละเอียดครบ (หมวด/เป้าหมาย/
+  // รางวัล) เพราะอันนี้คือสิ่งที่ขึ้นจริงตอนแชร์ลง Facebook/LINE ฯลฯ — ยิ่งมี
+  // รายละเอียดเยอะและมี call-to-action ชัด ยิ่งดึงดูดให้คนกดเข้ามาดู
+  const ogTitle = `🎯 ${inviter} ท้าคุณ: "${title}"`;
+  const descParts = [];
+  if (category) descParts.push(`📂 ${category}`);
+  descParts.push(`🎯 เป้าหมาย: ${goal}`);
+  if (reward) descParts.push(`🎁 รางวัล: ${reward}`);
+  descParts.push(`กดรับคำท้าเลย ก่อนเพื่อนจะไปไกลกว่านี้!`);
+  const ogDescription = descParts.join("  ·  ");
 
   res.status(200).send(`<!doctype html>
 <html lang="th">
@@ -83,14 +94,23 @@ module.exports = async function handler(req, res) {
   <meta property="og:title" content="${ogTitle}" />
   <meta property="og:description" content="${escapeHtml(ogDescription)}" />
   <meta property="og:url" content="${escapeHtml(pageUrl)}" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="${escapeHtml(ogImageUrl)}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Challenge Me — มีคนท้าคุณอยู่!" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${ogTitle}" />
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
+  <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}" />
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; background: #faf9f7; color: #222; margin: 0; }
-    .card { max-width: 480px; margin: 48px auto; background: white; border-radius: 16px; padding: 32px 24px;
+    .card { max-width: 480px; margin: 48px auto; background: white; border-radius: 16px; overflow: hidden;
       box-shadow: 0 2px 16px rgba(0,0,0,0.08); text-align: center; }
+    .cover { width: 100%; display: block; }
+    .content { padding: 28px 24px 32px; }
     .badge { color: #e11d48; font-weight: 700; font-size: 14px; }
+    .category { display: inline-block; margin-top: 8px; background: #fdecef; color: #e11d48; font-size: 12px;
+      font-weight: 700; padding: 4px 10px; border-radius: 999px; }
     h1 { font-size: 22px; margin: 12px 0 8px; }
     p.goal { color: #555; font-size: 15px; }
     p.reward { color: #b45309; font-size: 14px; }
@@ -101,12 +121,16 @@ module.exports = async function handler(req, res) {
 </head>
 <body>
   <div class="card">
-    <div class="badge">🎯 คำท้าจาก ${inviter}</div>
-    <h1>${title}</h1>
-    <p class="goal">${goal}</p>
-    ${reward ? `<p class="reward">🎁 ${reward}</p>` : ""}
-    <a class="cta" href="${escapeHtml(appUrl)}">รับคำท้า — เปิด Challenge Me</a>
-    <a class="skip" href="${escapeHtml(siteOrigin)}">ไปที่หน้าแรกแทน</a>
+    <img class="cover" src="${escapeHtml(ogImageUrl)}" alt="Challenge Me" />
+    <div class="content">
+      <div class="badge">🎯 คำท้าจาก ${inviter}</div>
+      ${category ? `<div><span class="category">${category}</span></div>` : ""}
+      <h1>${title}</h1>
+      <p class="goal">${goal}</p>
+      ${reward ? `<p class="reward">🎁 รางวัล: ${reward}</p>` : ""}
+      <a class="cta" href="${escapeHtml(appUrl)}">รับคำท้า — เปิด Challenge Me</a>
+      <a class="skip" href="${escapeHtml(siteOrigin)}">ไปที่หน้าแรกแทน</a>
+    </div>
   </div>
 </body>
 </html>`);
