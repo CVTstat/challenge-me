@@ -30,6 +30,7 @@ export default function CreateChallengeScreen() {
   const [category, setCategory] = useState("");
   const [goalDescription, setGoalDescription] = useState("");
   const [measurementType, setMeasurementType] = useState<MeasurementType>("YES_NO");
+  const [targetValue, setTargetValue] = useState("");
   const [rewardText, setRewardText] = useState("");
   const [milestoneTitles, setMilestoneTitles] = useState<string[]>(["", ""]);
   const [submitting, setSubmitting] = useState(false);
@@ -50,9 +51,16 @@ export default function CreateChallengeScreen() {
     setTitle("");
     setCategory("");
     setGoalDescription("");
+    setTargetValue("");
     setRewardText("");
     setMilestoneTitles(["", ""]);
   }
+
+  // แปลงค่าเป้าหมายที่พิมพ์มาเป็นตัวเลข (ต้องมากกว่า 0 ถึงจะใช้ได้)
+  const parsedTarget = (() => {
+    const n = Number(targetValue.trim());
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+  })();
 
   async function handleSubmitPersonal() {
     if (!session?.user) return;
@@ -61,6 +69,9 @@ export default function CreateChallengeScreen() {
       category: category.trim(),
       goalDescription: goalDescription.trim(),
       measurementType,
+      // เป้าหมาย = ต้อง check-in ให้ครบกี่ครั้งถึงจะเรียกว่าสำเร็จ — ค่านี้คือ
+      // สิ่งที่ใช้ตัดสินว่าจะปลดล็อกปุ่ม "รับใบไม้" เมื่อไหร่
+      targetValue: parsedTarget ?? undefined,
       rewardText: rewardText.trim() || undefined,
     });
     if (error || !challenge) {
@@ -98,6 +109,10 @@ export default function CreateChallengeScreen() {
     if (!session?.user) return;
     if (!title.trim() || !category.trim() || !goalDescription.trim()) {
       showAlert("กรอกไม่ครบ", "ใส่ชื่อ Challenge, Category และเป้าหมายก่อนนะ");
+      return;
+    }
+    if (type === "PERSONAL" && !parsedTarget) {
+      showAlert("ยังไม่ได้ตั้งเส้นชัย", "ใส่ว่าต้องทำให้ครบกี่ครั้งถึงจะเรียกว่าสำเร็จ (เช่น 10)");
       return;
     }
     setSubmitting(true);
@@ -158,6 +173,20 @@ export default function CreateChallengeScreen() {
               </Pressable>
             ))}
           </View>
+
+          {/* เส้นชัยที่ชัดเจน — ใช้ตัดสินว่าเมื่อไหร่ถึงจะได้ใบไม้ ถ้าไม่มีค่านี้
+              ระบบจะไม่รู้ว่าทำสำเร็จตอนไหน ปุ่มรับใบไม้ก็จะไม่ปลดล็อก */}
+          <Text style={styles.label}>ต้องทำให้ครบกี่ครั้งถึงจะสำเร็จ</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="เช่น 10 (ครั้ง/วัน ที่ต้อง check-in ให้ครบ)"
+            value={targetValue}
+            onChangeText={setTargetValue}
+            keyboardType="number-pad"
+          />
+          <Text style={styles.helper}>
+            ทำครบตามนี้เมื่อไหร่ ปุ่ม &quot;รับใบไม้&quot; ถึงจะขึ้นให้กด 🍃
+          </Text>
         </>
       ) : (
         <>
@@ -204,6 +233,7 @@ const styles = StyleSheet.create({
   container: { padding: 16, gap: 8 },
   heading: { fontSize: 20, fontWeight: "700", marginBottom: 8 },
   label: { fontWeight: "600", marginTop: 12 },
+  helper: { color: "#8a9484", fontSize: 12, marginTop: 6 },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 15 },
   optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   optionChip: { borderWidth: 1, borderColor: "#ddd", borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14 },

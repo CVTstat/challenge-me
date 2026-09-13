@@ -101,8 +101,27 @@ export async function startGrowing(challengeId: string) {
 }
 
 /**
+ * ตั้ง/แก้ "เป้าหมายว่าต้องทำให้ครบกี่ครั้ง" ของ Challenge ที่สร้างไปแล้ว
+ *
+ * จำเป็นเพราะ Challenge ที่สร้างก่อนหน้านี้ทั้งหมดมี target_value เป็น null
+ * (ฟอร์มสร้างเดิมไม่เคยถามค่านี้) — ถ้าไม่มีเป้าหมาย ระบบจะไม่รู้ว่าเมื่อไหร่
+ * ถึงจะเรียกว่า "ทำสำเร็จ" และปุ่มรับใบไม้ก็จะไม่มีวันปลดล็อก
+ */
+export async function setChallengeTarget(challengeId: string, targetValue: number) {
+  const { error } = await supabase
+    .from("challenges")
+    .update({ target_value: targetValue })
+    .eq("id", challengeId);
+  return { error: error?.message ?? null };
+}
+
+/**
  * Flow 11 / FR15.1: "ได้ใบไม้" — ทำสำเร็จจริงแล้ว ต้นไม้ได้ใบเพิ่ม 1 ใบ
  * (เดิมคือ "เติมตาข้างที่สอง") ต้องมาจากการกดของผู้ใช้เท่านั้นเช่นกัน
+ *
+ * หมายเหตุ: ฝั่ง UI จะโชว์ปุ่มนี้เฉพาะตอนทำครบเงื่อนไขแล้วเท่านั้น (ดู
+ * ChallengeDetailScreen) แต่ตัวฟังก์ชันยังคงต้องถูกเรียกจากการกดของผู้ใช้เอง
+ * เสมอตาม FR15.2 — ไม่มีการเติมใบไม้อัตโนมัติให้เด็ดขาด
  */
 export async function earnLeaf(challengeId: string) {
   const { error: darumaError } = await supabase

@@ -8,7 +8,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/providers/AuthProvider";
-import { startGrowing, earnLeaf, submitCheckIn, toggleCheer } from "@/api/challenges";
+import { startGrowing, earnLeaf, setChallengeTarget, submitCheckIn, toggleCheer } from "@/api/challenges";
 import { completeMilestone, computeJourneyProgressPct, listMilestones } from "@/api/lifeChallenge";
 import { getChallengeProgress } from "@/api/progress";
 import type { ProgressSummary } from "@/api/progress";
@@ -43,6 +43,7 @@ export default function ChallengeDetailScreen() {
   const [busy, setBusy] = useState(false);
   const [changeGoalMode, setChangeGoalMode] = useState(false);
   const [newGoalText, setNewGoalText] = useState("");
+  const [targetInput, setTargetInput] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -193,6 +194,24 @@ export default function ChallengeDetailScreen() {
     }
   }
 
+  // ตั้งเส้นชัยย้อนหลังให้ Challenge เก่าที่ยังไม่มี target_value (ฟอร์มสร้าง
+  // เวอร์ชันก่อนหน้าไม่เคยถามค่านี้) — ถ้าไม่มีเส้นชัย ปุ่มรับใบไม้จะไม่ปลดล็อก
+  async function handleSetTarget() {
+    const n = Number(targetInput.trim());
+    if (!Number.isFinite(n) || n <= 0) {
+      showAlert("ใส่ตัวเลขก่อน", "ใส่จำนวนครั้งที่ต้องทำให้ครบ เช่น 10");
+      return;
+    }
+    setBusy(true);
+    const { error } = await setChallengeTarget(params.challengeId, Math.floor(n));
+    setBusy(false);
+    if (error) showAlert("ตั้งเป้าหมายไม่สำเร็จ", error);
+    else {
+      setTargetInput("");
+      load();
+    }
+  }
+
   async function handleCompleteMilestone(milestoneId: string) {
     setBusy(true);
     const { error } = await completeMilestone(params.challengeId, milestoneId);
@@ -216,6 +235,18 @@ export default function ChallengeDetailScreen() {
   // 🍃 = ได้ใบไม้แล้ว (สำเร็จ) · 🌱 = เริ่มปลูกแล้ว กำลังพยายาม · 🌰 = ยังไม่เริ่ม
   const treeEmoji = growth.right_eye_filled_at ? "🍃" : growth.left_eye_filled_at ? "🌱" : "🌰";
   const journeyPct = challenge.type === "LIFE" ? computeJourneyProgressPct(milestones) : null;
+
+  // ───────── เงื่อนไข "ทำสำเร็จ" ที่ใช้ปลดล็อกปุ่มรับใบไม้ ─────────
+  // PERSONAL: ต้อง check-in ครบตามจำนวนที่ตั้งไว้ (challenges.target_value)
+  // LIFE:     ต้องทำ Milestone ครบทุกข้อ
+  // ถ้ายังไม่ครบ ปุ่มจะไม่ขึ้นเลย — เห็นแค่ว่าเหลืออีกเท่าไหร่
+  const target = challenge.target_value ?? null;
+  const doneCount = progress?.totalCheckIns ?? 0;
+  const remaining = target !== null ? Math.max(0, target - doneCount) : null;
+  const targetPct = target ? Math.min(100, Math.round((doneCount / target) * 100)) : 0;
+  const allMilestonesDone = milestones.length > 0 && milestones.every((m) => m.status === "DONE");
+  const isGoalReached =
+    challenge.type === "LIFE" ? allMilestonesDone : target !== null && doneCount >= target;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -298,7 +329,17 @@ export default function ChallengeDetailScreen() {
             🔥 Streak ปัจจุบัน {progress.currentStreak} · ดีที่สุด {progress.bestStreak}
           </Text>
           <Text style={styles.progressLine}>✓ Check-in ทั้งหมด {progress.totalCheckIns} ครั้ง</Text>
-          {progress.progressPct !== null && <Text style={styles.progressLine}>📈 ความคืบหน้า {progress.progressPct}%</Text>}
+          {target !== null && (
+            <>
+              <Text style={styles.progressLine}>
+                🎯 ทำไปแล้ว {doneCount} / {target} ครั้ง ({targetPct}%)
+              </Text>
+              <View style={styles.barTrack}>
+                <View style={[styles.barFill, { flex: targetPct }]} />
+                <View style={{ flex: 100 - targetPct }} />
+              </View>
+            </>
+          )}
         </View>
       )}
 
@@ -348,11 +389,41 @@ export default function ChallengeDetailScreen() {
             <Text style={styles.secondaryButtonText}>📤 แชร์ความคืบหน้า</Text>
           </Pressable>
 
-          {/* Flow 11: ปกติจะ trigger จากเงื่อนไขถึงเป้าหมายอัตโนมัติ —
-              ใส่ปุ่ม manual ไว้ให้กดรับใบไม้เอง (FR15.2: ต้องกดเองเสมอ) */}
-          <Pressable style={styles.leafButton} onPress={handleEarnLeaf} disabled={busy}>
-            <Text style={styles.leafButtonText}>🍃 ทำสำเร็จแล้ว — รับใบไม้ 1 ใบ</Text>
-          </Pressable>
+          {/* Flow 11 / FR15.1-15.2: ปุ่มรับใบไม้ขึ้นเฉพาะตอนทำครบเงื่อนไขแล้ว
+              เท่านั้น (ตาม feedback ของผู้ใช้) — แต่ยังต้องให้ผู้ใช้กดเองอยู่ดี
+              ไม่มีการเติมใบไม้ให้อัตโนมัติ เพราะการกดรับเองคือส่วนหนึ่งของพิธี */}
+          {isGoalReached ? (
+            <View style={styles.unlockedBox}>
+              <Text style={styles.unlockedText}>🎉 ทำครบ {target} ครั้งแล้ว — ใบไม้ใบนี้เป็นของคุณ</Text>
+              <Pressable style={styles.leafButton} onPress={handleEarnLeaf} disabled={busy}>
+                <Text style={styles.leafButtonText}>🍃 ทำสำเร็จแล้ว — รับใบไม้ 1 ใบ</Text>
+              </Pressable>
+            </View>
+          ) : target !== null ? (
+            <View style={styles.lockedBox}>
+              <Text style={styles.lockedText}>🔒 อีก {remaining} ครั้ง ถึงจะได้รับใบไม้</Text>
+              <Text style={styles.lockedSub}>ทำครบ {target} ครั้งเมื่อไหร่ ปุ่มรับใบไม้จะขึ้นมาเอง</Text>
+            </View>
+          ) : isOwner ? (
+            <View style={styles.lockedBox}>
+              <Text style={styles.lockedText}>ยังไม่ได้ตั้งเส้นชัยของ Challenge นี้</Text>
+              <Text style={styles.lockedSub}>
+                ใส่ว่าต้องทำให้ครบกี่ครั้งถึงจะเรียกว่าสำเร็จ แล้วปุ่มรับใบไม้จะขึ้นเองตอนทำครบ
+              </Text>
+              <View style={styles.targetRow}>
+                <TextInput
+                  style={styles.targetInput}
+                  placeholder="เช่น 10"
+                  value={targetInput}
+                  onChangeText={setTargetInput}
+                  keyboardType="number-pad"
+                />
+                <Pressable style={styles.targetButton} onPress={handleSetTarget} disabled={busy}>
+                  <Text style={styles.targetButtonText}>ตั้งเป้าหมาย</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
         </View>
       )}
 
@@ -364,6 +435,23 @@ export default function ChallengeDetailScreen() {
           <Pressable style={styles.secondaryButton} onPress={handleShareProgress}>
             <Text style={styles.secondaryButtonText}>📤 แชร์ความคืบหน้า</Text>
           </Pressable>
+
+          {/* Life Challenge: เงื่อนไขคือทำ Milestone ครบทุกข้อ */}
+          {allMilestonesDone ? (
+            <View style={styles.unlockedBox}>
+              <Text style={styles.unlockedText}>🎉 ทำ Milestone ครบทุกข้อแล้ว!</Text>
+              <Pressable style={styles.leafButton} onPress={handleEarnLeaf} disabled={busy}>
+                <Text style={styles.leafButtonText}>🍃 ทำสำเร็จแล้ว — รับใบไม้ 1 ใบ</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.lockedBox}>
+              <Text style={styles.lockedText}>
+                🔒 เหลืออีก {milestones.filter((m) => m.status !== "DONE").length} Milestone
+              </Text>
+              <Text style={styles.lockedSub}>ทำครบทุกข้อเมื่อไหร่ ปุ่มรับใบไม้จะขึ้นมาเอง</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -437,6 +525,20 @@ const styles = StyleSheet.create({
   growButton: { backgroundColor: "#2e7d32", borderRadius: 8, padding: 14, alignSelf: "stretch" },
   leafButton: { borderWidth: 1, borderColor: "#2e7d32", backgroundColor: "#f4f8f1", borderRadius: 8, padding: 12 },
   leafButtonText: { color: "#2e7d32", textAlign: "center", fontWeight: "700" },
+  // แถบความคืบหน้าเทียบกับเส้นชัย
+  barTrack: { flexDirection: "row", height: 8, borderRadius: 999, backgroundColor: "#e6e6e6", overflow: "hidden", marginTop: 6 },
+  barFill: { backgroundColor: "#2e7d32", borderRadius: 999 },
+  // กล่องตอนยังทำไม่ครบ (ปุ่มรับใบไม้ยังไม่ขึ้น)
+  lockedBox: { backgroundColor: "#f6f6f4", borderRadius: 10, padding: 14, gap: 6 },
+  lockedText: { fontWeight: "700", color: "#6b6b66", textAlign: "center" },
+  lockedSub: { fontSize: 12, color: "#95958e", textAlign: "center", lineHeight: 18 },
+  targetRow: { flexDirection: "row", gap: 8, marginTop: 6 },
+  targetInput: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 10, backgroundColor: "white" },
+  targetButton: { backgroundColor: "#2e7d32", borderRadius: 8, paddingHorizontal: 16, justifyContent: "center" },
+  targetButtonText: { color: "white", fontWeight: "700" },
+  // กล่องตอนปลดล็อกแล้ว
+  unlockedBox: { backgroundColor: "#eef6ea", borderRadius: 10, padding: 14, gap: 10 },
+  unlockedText: { fontWeight: "700", color: "#2e7d32", textAlign: "center" },
   section: { marginTop: 24, gap: 12 },
   primaryButton: { backgroundColor: "#e11d48", borderRadius: 8, padding: 14 },
   primaryButtonText: { color: "white", textAlign: "center", fontWeight: "700", fontSize: 16 },
