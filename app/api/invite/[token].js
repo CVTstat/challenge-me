@@ -58,9 +58,9 @@ module.exports = async function handler(req, res) {
 <html lang="th"><head><meta charset="utf-8" />
 <title>ไม่พบคำท้านี้ — Challenge Me</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" /></head>
-<body style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#f4f8f1;color:#222;">
+<body style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#fdf8f1;color:#222;">
 <h1>ลิงก์คำท้านี้ไม่พร้อมใช้งานแล้ว</h1>
-<p><a href="${escapeHtml(siteOrigin)}" style="color:#2e7d32;font-weight:700;">ไปที่ Challenge Me</a></p>
+<p><a href="${escapeHtml(siteOrigin)}" style="color:#d61f3f;font-weight:700;">ไปที่ Challenge Me</a></p>
 </body></html>`);
     return;
   }
@@ -81,12 +81,12 @@ module.exports = async function handler(req, res) {
   // บั๊กที่ทำให้ข้อความขาดหายไปทันทีที่เจอเครื่องหมาย " ตัวแรก (ตัดข้อความทั้งหมด
   // หลังจากนั้นทิ้งไปเลย) เคยลองแล้วเจอปัญหานี้จริง จึงเลี่ยงไม่ใช้เครื่องหมาย
   // คำพูดในข้อความเหล่านี้อีกเลย
-  const ogTitle = `🌱 ${inviter} ท้าคุณ — ${title}`;
+  const ogTitle = `🎯 ${inviter} ท้าคุณ — ${title}`;
   const descParts = [];
   if (category) descParts.push(`📂 ${category}`);
   descParts.push(`🎯 เป้าหมาย: ${goal}`);
   if (reward) descParts.push(`🎁 รางวัล: ${reward}`);
-  descParts.push(`ทำสำเร็จ = ได้ใบไม้ 1 ใบบนต้นไม้ของคุณ 🍃 กดรับคำท้าเลย!`);
+  descParts.push(`มีดารุมะรอคุณมาเติมตาให้ครบอยู่ — ทำสำเร็จเมื่อไหร่ ต้นไม้ของคุณได้ใบไม้เพิ่ม 1 ใบ 🍃`);
   const ogDescription = descParts.join("  ·  ");
 
   res.status(200).send(`<!doctype html>
@@ -103,27 +103,27 @@ module.exports = async function handler(req, res) {
   <meta property="og:image" content="${escapeHtml(ogImageUrl)}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Challenge Me — มีคนท้าคุณอยู่! ทุกความสำเร็จ = ใบไม้ 1 ใบ" />
+  <meta property="og:image:alt" content="Challenge Me — มีดารุมะรอคุณมาเติมตาให้ครบ" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${ogTitle}" />
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
   <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}" />
   <style>
-    body { font-family: -apple-system, system-ui, sans-serif; background: #f4f8f1; color: #222; margin: 0; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: #fdf8f1; color: #222; margin: 0; }
     .card { max-width: 480px; margin: 48px auto; background: white; border-radius: 16px; overflow: hidden;
       box-shadow: 0 2px 16px rgba(0,0,0,0.08); text-align: center; }
     .cover { width: 100%; display: block; }
     .content { padding: 28px 24px 32px; }
-    .badge { color: #2e7d32; font-weight: 700; font-size: 14px; }
-    .category { display: inline-block; margin-top: 8px; background: #eaf3e6; color: #2e7d32; font-size: 12px;
+    .badge { color: #d61f3f; font-weight: 700; font-size: 14px; }
+    .category { display: inline-block; margin-top: 8px; background: #fdecef; color: #d61f3f; font-size: 12px;
       font-weight: 700; padding: 4px 10px; border-radius: 999px; }
     h1 { font-size: 22px; margin: 12px 0 8px; }
     p.goal { color: #555; font-size: 15px; }
     p.reward { color: #b45309; font-size: 14px; }
-    a.cta { display: block; margin-top: 24px; background: #2e7d32; color: white; text-decoration: none;
+    a.cta { display: block; margin-top: 24px; background: #d61f3f; color: white; text-decoration: none;
       font-weight: 700; padding: 14px; border-radius: 8px; }
     a.skip { display: block; margin-top: 12px; color: #888; text-decoration: none; font-size: 13px; }
-    p.leafnote { margin-top: 16px; color: #5a6b54; font-size: 13px; background: #f4f8f1;
+    p.leafnote { margin-top: 16px; color: #6b5a4e; font-size: 13px; background: #fdf3ee;
       border-radius: 8px; padding: 10px 12px; }
   </style>
 </head>
@@ -131,13 +131,13 @@ module.exports = async function handler(req, res) {
   <div class="card">
     <img class="cover" src="${escapeHtml(ogImageUrl)}" alt="Challenge Me" />
     <div class="content">
-      <div class="badge">🌱 คำท้าจาก ${inviter}</div>
+      <div class="badge">🎯 คำท้าจาก ${inviter}</div>
       ${category ? `<div><span class="category">${category}</span></div>` : ""}
       <h1>${title}</h1>
       <p class="goal">${goal}</p>
       ${reward ? `<p class="reward">🎁 รางวัล: ${reward}</p>` : ""}
-      <p class="leafnote">ทำสำเร็จเมื่อไหร่ = ได้ใบไม้ 1 ใบไปติดบนต้นไม้ของคุณ 🍃</p>
-      <a class="cta" href="${escapeHtml(appUrl)}">🌱 รับคำท้า — เปิด Challenge Me</a>
+      <p class="leafnote">รับคำท้าแล้วจะได้ดารุมะของคุณเอง — เติมตาข้างแรกตอนให้คำมั่น เติมข้างที่สองตอนทำสำเร็จ แล้วต้นไม้ของคุณจะได้ใบไม้เพิ่ม 1 ใบ 🍃</p>
+      <a class="cta" href="${escapeHtml(appUrl)}">🎯 รับคำท้า — เปิด Challenge Me</a>
       <a class="skip" href="${escapeHtml(siteOrigin)}">ไปที่หน้าแรกแทน</a>
     </div>
   </div>

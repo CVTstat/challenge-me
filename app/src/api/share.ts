@@ -30,14 +30,20 @@ const SHARE_COPY: Record<ShareCardType, (c: ChallengeRow) => string> = {
 export async function generateAndShareCard(challenge: ChallengeRow, type: ShareCardType) {
   const deepLink = `${DEEP_LINK_SCHEME}/${challenge.id}`;
 
-  const { error: insertError } = await supabase.from("share_cards").insert({
-    challenge_id: challenge.id,
-    type,
-    deep_link: deepLink,
-  });
-  if (insertError) return { error: insertError.message };
-
-  // หมายเหตุ (แก้บั๊ก): เดิมเรียก Share ของ React Native ตรง ๆ ซึ่งบนเว็บไม่
+  // หมายเหตุ (แก้บั๊ก — สาเหตุที่ปุ่ม "แชร์ความคืบหน้า" กดแล้วไม่มีอะไรเกิดขึ้น):
+  // เดิมโค้ดตรงนี้ insert แถวลง share_cards ก่อน แล้วถ้า insert ไม่สำเร็จจะ
+  // return ออกทันที ทำให้ไม่มีทางไปถึงบรรทัดที่เปิดกล่องแชร์เลย — และ insert
+  // ก็ไม่สำเร็จจริง ๆ เพราะตาราง share_cards เปิด RLS ไว้ตั้งแต่ 0001 แต่มีแค่
+  // policy สำหรับ select ไม่มี policy สำหรับ insert (บั๊กชนิดเดียวกับตาราง
+  // daruma ที่เคยเจอ) ฝั่ง UI ก็ไม่ได้เอา error ไปแสดง ปุ่มจึงดูเหมือนตายสนิท
+  //
+  // แก้สองชั้น:
+  //   1) ที่นี่ — การแชร์คือสิ่งที่ผู้ใช้ต้องการจริง ๆ ส่วนการบันทึก log เป็น
+  //      เรื่องรอง จึงเปิดกล่องแชร์ก่อนเสมอ แล้วค่อยบันทึกแบบ best-effort
+  //      ต่อให้บันทึกไม่ได้ ผู้ใช้ก็ยังแชร์ได้ตามปกติ
+  //   2) migration 0008 — เพิ่ม RLS policy ให้ insert ได้จริง log จะได้ครบ
+  //
+  // เดิมเรียก Share ของ React Native ตรง ๆ ซึ่งบนเว็บไม่
   // ทำงานเลย (react-native-web ไม่ได้ implement ให้) กดปุ่ม "แชร์ความคืบหน้า"
   // แล้วจึงเงียบสนิท — เปลี่ยนมาใช้ shareContent ที่เด้ง share sheet ของเครื่อง
   // ได้จริงทั้งบนเว็บและบนแอป (ดู lib/share.ts)
@@ -50,7 +56,7 @@ export async function generateAndShareCard(challenge: ChallengeRow, type: ShareC
     ? buildInviteShareUrl(getWebBaseUrl(), challenge.public_invite_token)
     : deepLink;
 
-  await shareContent({
+  const shared = await shareContent({
     title: "Challenge Me",
     message: SHARE_COPY[type](challenge),
     url: webUrl,
@@ -58,5 +64,12 @@ export async function generateAndShareCard(challenge: ChallengeRow, type: ShareC
   });
   // ผู้ใช้ปิด share sheet เองก็ไม่ถือเป็น error ของ flow หลัก (FR14.4)
 
-  return { error: null as string | null };
+  // บันทึก log แบบ best-effort — ล้มเหลวก็ไม่กระทบผู้ใช้
+  await supabase.from("share_cards").insert({
+    challenge_id: challenge.id,
+    type,
+    deep_link: deepLink,
+  });
+
+  return { shared, error: null as string | null };
 }

@@ -1,11 +1,14 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, Linking } from "react-native";
+import { showAlert } from "@/lib/alert";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
 
 import { listPublishedGlobalChallenges } from "@/api/challenges";
 import type { GlobalChallengeRow } from "@/types/database";
+
+const CONTACT_EMAIL = "cvtstat@gmail.com";
 
 // Flow 16 (USER-FLOWS.md §16) — [Global tab]: Featured/Trending/New/Closing Soon
 // (เวอร์ชันนี้แสดงเป็น list เดียวก่อน — แยก section ตาม Master Concept ทำเพิ่มได้
@@ -28,6 +31,23 @@ export default function GlobalScreen() {
     }, [load])
   );
 
+  // เปิดแอปอีเมลของเครื่องพร้อมกรอกผู้รับ/หัวข้อไว้ให้ — ผู้ใช้แค่พิมพ์เนื้อหา
+  // แล้วกดส่ง (ถ้าเครื่องไม่มีแอปอีเมลผูกไว้ จะบอกอีเมลให้ไปส่งเองแทน)
+  async function handleContact() {
+    const subject = encodeURIComponent("อยากร่วมสร้าง Global Challenge กับ Challenge Me");
+    const body = encodeURIComponent(
+      "สวัสดีครับ/ค่ะ\n\nแนะนำตัว (องค์กร/ทีม/บุคคล):\n\nไอเดีย Challenge ที่อยากทำร่วมกัน:\n\nสิ่งที่อยากเปลี่ยน:\n\nช่องทางติดต่อกลับ:\n"
+    );
+    const url = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (!ok) throw new Error("no mail app");
+      await Linking.openURL(url);
+    } catch {
+      showAlert("ส่งอีเมลมาที่", CONTACT_EMAIL);
+    }
+  }
+
   return (
     <FlatList
       contentContainerStyle={styles.list}
@@ -40,6 +60,20 @@ export default function GlobalScreen() {
             <Text style={styles.emptyTitle}>ยังไม่มี Global Challenge ที่เปิดรับสมัคร</Text>
           </View>
         ) : null
+      }
+      ListFooterComponent={
+        <View style={styles.inviteCard}>
+          <Text style={styles.inviteTitle}>
+            ถ้าคุณคือองค์กร ผู้สนใจ หรือคนหนึ่งคนที่อยากเปลี่ยนโลก{"\n"}ส่งความคิดของคุณมาบอกเราสิ?
+          </Text>
+          <Text style={styles.inviteSub}>
+            Global Challenge เกิดจากไอเดียของคนที่อยากเห็นอะไรบางอย่างดีขึ้น — เล่าให้เราฟังได้เลย
+          </Text>
+          <Pressable style={styles.inviteButton} onPress={handleContact}>
+            <Text style={styles.inviteButtonText}>✉️ ส่งไอเดียมาหาเรา</Text>
+          </Pressable>
+          <Text style={styles.inviteEmail}>{CONTACT_EMAIL}</Text>
+        </View>
       }
       renderItem={({ item }) => (
         <Pressable
@@ -67,6 +101,26 @@ const styles = StyleSheet.create({
   cardMeta: { color: "#555" },
   cardReward: { color: "#b45309", marginTop: 4 },
   cardBadge: { color: "#e11d48", marginTop: 2 },
-  emptyState: { alignItems: "center", marginTop: 80 },
+  emptyState: { alignItems: "center", marginTop: 60 },
   emptyTitle: { color: "#888" },
+  inviteCard: {
+    marginTop: 20,
+    backgroundColor: "#fdf3ee",
+    borderRadius: 14,
+    padding: 20,
+    alignItems: "center",
+    gap: 8,
+  },
+  inviteTitle: { fontSize: 16, fontWeight: "700", textAlign: "center", lineHeight: 24, color: "#26170f" },
+  inviteSub: { fontSize: 13, color: "#8a7264", textAlign: "center", lineHeight: 19 },
+  inviteButton: {
+    marginTop: 8,
+    backgroundColor: "#d61f3f",
+    borderRadius: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 26,
+    alignSelf: "stretch",
+  },
+  inviteButtonText: { color: "white", fontWeight: "700", textAlign: "center", fontSize: 15 },
+  inviteEmail: { fontSize: 12, color: "#a1897a", marginTop: 2 },
 });
