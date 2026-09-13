@@ -6,7 +6,7 @@
 // ผู้ใช้ต้องการจริง ๆ — ค่าที่ส่งออกไป (onChange) ยังเป็น string ธรรมดา
 // เหมือนเดิมทุกประการ ไม่กระทบ backend/ฐานข้อมูลเลย
 
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { CategoryOption, OTHER_CATEGORY_VALUE } from "@/lib/categories";
 import { colors, font, radius, spacing } from "@/theme";
@@ -19,19 +19,30 @@ interface Props {
 }
 
 export default function CategoryPicker({ options, value, onChange, customPlaceholder }: Props) {
-  // ถือว่ากำลังอยู่โหมด "พิมพ์เอง" เมื่อค่าปัจจุบันไม่ตรงกับ preset ไหนเลย
-  // (ครอบคลุมทั้งกรณีเพิ่งกด "อื่น ๆ" และกรณี Challenge เก่าที่เคยพิมพ์
-  // category แบบอิสระไว้ก่อนจะมีตัวเลือกสำเร็จรูปชุดนี้ — ค่าเดิมจะไม่หายไป)
+  // สถานะ "กำลังพิมพ์เอง" ต้องเก็บเป็น state ของตัวเอง จะเดาจากค่า value อย่างเดียว
+  // ไม่ได้
+  //
+  // บั๊กที่เจอจริง: เดิมใช้เงื่อนไข "value ไม่ว่างและไม่ตรง preset ไหน" แทนการ
+  // จำว่าผู้ใช้กดปุ่มอื่น ๆ ไปแล้ว — พอยังไม่ได้เลือกอะไรเลย (value ว่าง) กดปุ่ม
+  // "อื่น ๆ" จึงไม่มีอะไรเกิดขึ้น เพราะค่ายังว่างอยู่เหมือนเดิม ช่องพิมพ์เลย
+  // ไม่โผล่ กลายเป็นปุ่มที่กดไม่ได้
   const matchedPreset = options.find((o) => o.value === value && o.value !== OTHER_CATEGORY_VALUE);
-  const isCustomMode = value.trim().length > 0 && !matchedPreset;
-  const selectedChip = matchedPreset ? matchedPreset.value : isCustomMode ? OTHER_CATEGORY_VALUE : "";
+  // ค่าที่พิมพ์เองไว้ก่อนหน้า (เช่น Challenge เก่าที่สร้างตอนยังเป็นช่องพิมพ์)
+  // ก็ต้องนับว่าอยู่โหมดพิมพ์เองด้วย ค่าเดิมจะได้ไม่หาย
+  const hasCustomValue = value.trim().length > 0 && !matchedPreset;
+  const [customMode, setCustomMode] = useState(hasCustomValue);
+
+  const showCustomInput = customMode || hasCustomValue;
+  const selectedChip = matchedPreset ? matchedPreset.value : showCustomInput ? OTHER_CATEGORY_VALUE : "";
 
   function handlePick(opt: CategoryOption) {
     if (opt.value === OTHER_CATEGORY_VALUE) {
+      setCustomMode(true);
       // สลับจาก preset อื่นมาเป็น "อื่น ๆ" ต้องเคลียร์ค่าเดิมเพื่อให้พิมพ์ใหม่ได้
       if (matchedPreset) onChange("");
       return;
     }
+    setCustomMode(false);
     onChange(opt.value);
   }
 
@@ -54,7 +65,7 @@ export default function CategoryPicker({ options, value, onChange, customPlaceho
           );
         })}
       </View>
-      {selectedChip === OTHER_CATEGORY_VALUE && (
+      {showCustomInput && (
         <TextInput
           style={styles.input}
           placeholder={customPlaceholder ?? "พิมพ์หมวดของคุณเอง"}
