@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { showAlert } from "@/lib/alert";
-import { isLineConfigured, jumpToLineApp, startLineLogin } from "@/lib/liff";
+import { getLineAppUrl, isLineConfigured, startLineLogin } from "@/lib/liff";
 import { signInWithLine } from "@/api/lineAuth";
 import { colors, font, radius, shadow, spacing } from "@/theme";
 
@@ -14,6 +14,12 @@ import { colors, font, radius, shadow, spacing } from "@/theme";
  * พอมีคนกดลิงก์คำท้าที่แชร์ไป เขาจะถูกพาไปหน้า "สมัครสมาชิก" ซึ่งไม่มีปุ่มนี้
  * เลยเห็นแต่ช่องอีเมล/รหัสผ่าน — คนที่เพิ่งรู้จักแอปครั้งแรกเจอแบบนี้ส่วนใหญ่
  * จะปิดทิ้ง มีปุ่มเดียวที่ใช้ได้ทุกหน้าจึงตัดปัญหานี้ทิ้งไปทั้งชุด
+ *
+ * ปุ่มนี้มีสองร่าง:
+ *   • บนมือถือ → เป็น "ลิงก์จริง" (แท็ก a) ที่ชี้ไป liff.line.me เพื่อเปิดแอป LINE
+ *   • บนคอม / อยู่ในแอป LINE อยู่แล้ว → เป็นปุ่มธรรมดาที่ล็อกอินผ่านเว็บ
+ * เหตุผลของร่างแรกอยู่ในคอมเมนต์ของ getLineAppUrl() — สรุปสั้น ๆ คือเบราว์เซอร์
+ * มือถือเปิดแอปอื่นให้เฉพาะตอนกดลิงก์จริงเท่านั้น สั่งด้วย JavaScript ไม่ได้
  */
 
 /** อยู่ในเบราว์เซอร์ที่ฝังมาในแอปอื่น (Facebook / IG) หรือเปล่า */
@@ -44,8 +50,7 @@ export default function LineLoginButton({ label = "เข้าสู่ระ�
     if (result.ok) return;
     if (result.needsLineLogin) {
       // ยังไม่ได้ล็อกอิน LINE — พาไปหน้าล็อกอินผ่านเว็บ
-      // (ทางมือถือจัดการไปแล้วตั้งแต่ handlePress ซึ่งกระโดดเข้าแอป LINE เลย
-      //  มาถึงตรงนี้คือเปิดบนคอม หรือกระโดดไม่ได้)
+      // (ทางมือถือไม่มาถึงตรงนี้ เพราะปุ่มเป็นลิงก์ไปแอป LINE ตั้งแต่แรกแล้ว)
       // ตอนลองเงียบ ๆ ห้าม redirect ไม่งั้นคนที่อยากใช้อีเมลจะโดนลากไปด้วย
       if (!silent) await startLineLogin();
       return;
@@ -58,37 +63,42 @@ export default function LineLoginButton({ label = "เข้าสู่ระ�
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [available, autoTry]);
 
-  /**
-   * จังหวะที่นิ้วแตะปุ่ม
-   *
-   * บนมือถือต้องสั่งเปิดแอป LINE "เดี๋ยวนั้นเลย" ห้ามมี await มาคั่นก่อน
-   * เพราะเบราว์เซอร์อนุญาตให้เปิดแอปอื่นเฉพาะตอนที่ผู้ใช้เพิ่งกดเท่านั้น
-   * (ดูคำอธิบายเต็มที่ jumpToLineApp ใน lib/liff.ts)
-   */
-  function handlePress() {
-    if (jumpToLineApp()) return;
-    attempt(false);
-  }
-
   if (!available) return null;
+
+  // ในแอป Facebook การเปิดแอปอื่นจะมีกล่องถามยืนยันก่อนเสมอ
+  // บอกไว้ล่วงหน้าว่ากล่องนี้ปกติ ไม่ใช่ error — ไม่งั้นหลายคนจะกด Cancel
+  const hint = inEmbeddedBrowser() ? (
+    <Text style={styles.hint}>
+      ถ้ามีกล่องถามว่าจะเปิดแอปข้างนอกไหม ให้กด &quot;Open&quot; เพื่อเข้าผ่านแอป LINE
+    </Text>
+  ) : null;
+
+  const lineAppUrl = getLineAppUrl();
+
+  if (lineAppUrl) {
+    // react-native-web แปลง View ที่มี href ให้เป็นแท็ก <a> จริง ๆ
+    // (RN ฝั่ง native ไม่รู้จัก prop นี้ จึงต้อง cast — และเส้นทางนี้เป็นของเว็บเท่านั้น)
+    const linkProps = { href: lineAppUrl } as unknown as Record<string, unknown>;
+    return (
+      <View style={style}>
+        <View {...linkProps} style={[styles.button, styles.link]}>
+          <Text style={styles.buttonText}>{label}</Text>
+        </View>
+        {hint}
+      </View>
+    );
+  }
 
   return (
     <View style={style}>
       <Pressable
         style={({ pressed }) => [styles.button, pressed && { opacity: 0.9 }]}
-        onPress={handlePress}
+        onPress={() => attempt(false)}
         disabled={busy}
       >
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{label}</Text>}
       </Pressable>
-
-      {/* ในแอป Facebook การเปิดแอปอื่นจะมีกล่องถามยืนยันก่อนเสมอ (iOS บังคับ)
-          บอกไว้ล่วงหน้าว่ากล่องนี้ปกติ ไม่ใช่ error — ไม่งั้นหลายคนจะกด Cancel */}
-      {inEmbeddedBrowser() && (
-        <Text style={styles.hint}>
-          ถ้ามีกล่องถามว่าจะเปิดแอปข้างนอกไหม ให้กด &quot;Open&quot; เพื่อเข้าผ่านแอป LINE
-        </Text>
-      )}
+      {hint}
     </View>
   );
 }
@@ -115,6 +125,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     ...shadow.card,
   },
+  // ตอนเป็นแท็ก <a> เบราว์เซอร์จะขีดเส้นใต้และใส่สีลิงก์ให้เอง ต้องล้างทิ้ง
+  link: { textDecorationLine: "none" },
   buttonText: { color: "#ffffff", fontWeight: "700", fontSize: font.body },
   hint: { marginTop: spacing.xs, fontSize: font.tiny, color: colors.textMuted, textAlign: "center", lineHeight: 16 },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginVertical: spacing.xs },

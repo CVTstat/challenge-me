@@ -14,6 +14,11 @@ import { Platform } from "react-native";
 const LIFF_SDK_URL = "https://static.line-scdn.net/liff/edge/2/sdk.js";
 const LIFF_ID = process.env.EXPO_PUBLIC_LIFF_ID ?? "";
 
+// ไอดีของบัญชีทางการ (LINE OA) เช่น "@123abcde" — ใช้สร้างลิงก์ "แอดเพื่อน"
+// ปลอดภัยที่จะขึ้นต้นด้วย EXPO_PUBLIC_ เพราะไอดีนี้เป็นข้อมูลสาธารณะอยู่แล้ว
+// (ใครก็เห็นได้จากลิงก์แอดเพื่อนที่เราแจก) ไม่ใช่ความลับแบบ token หรือ secret
+const LINE_OA_ID = process.env.EXPO_PUBLIC_LINE_OA_ID ?? "";
+
 /** ตั้งค่า LIFF ไว้หรือยัง — ถ้ายัง ปุ่ม LINE จะถูกซ่อนไปเลย */
 export function isLineConfigured(): boolean {
   return Platform.OS === "web" && LIFF_ID.trim().length > 0;
@@ -26,6 +31,7 @@ type LiffSdk = {
   logout: () => void;
   getIDToken: () => string | null;
   isInClient: () => boolean;
+  getFriendship?: () => Promise<{ friendFlag: boolean }>;
   shareTargetPicker?: (messages: unknown[]) => Promise<unknown>;
 };
 
@@ -107,36 +113,32 @@ function inLineAppSync(): boolean {
 }
 
 /**
- * เปิดแอปนี้ "ข้างในแอป LINE" แทนการล็อกอินผ่านเว็บ
+ * ลิงก์ที่สั่งให้มือถือ "เปิดแอป LINE" แล้วโหลดหน้าเราข้างในนั้น
  *
  * ทำไมต้องมี: เวลาคนกดลิงก์จากในแอป Facebook แล้วกดปุ่มเข้าสู่ระบบด้วย LINE
  * วิธีปกติจะพาไปหน้า access.line.me ที่ต้องพิมพ์อีเมล+รหัสผ่าน LINE ซึ่งแทบ
  * ไม่มีใครจำได้ (คนส่วนใหญ่ล็อกอิน LINE ค้างไว้ในแอปมือถืออยู่แล้ว ไม่เคย
  * ต้องใช้รหัสผ่าน) สุดท้ายต้องกด "Log-in with LINE app" อีกต่อหนึ่งกว่าจะเข้าได้
+ * ลิงก์นี้ข้ามทั้งหมดนั้นไปเลย เพราะในแอป LINE ผู้ใช้ล็อกอินอยู่แล้ว
  *
- * ลิงก์ liff.line.me สั่งให้มือถือเปิดแอป LINE ขึ้นมาตรง ๆ แล้วโหลดหน้าเราข้างใน
- * ซึ่งผู้ใช้ล็อกอินอยู่แล้ว จึงข้ามเรื่องรหัสผ่านไปได้ทั้งหมด
+ * *** สำคัญมาก: ต้องเอาไปใส่เป็น href ของลิงก์จริง ห้ามสั่ง redirect ด้วย
+ * JavaScript ***
+ * เบราว์เซอร์บนมือถือยอมให้เว็บเปิดแอปอื่นได้เฉพาะตอนที่ผู้ใช้กด "ลิงก์จริง"
+ * เท่านั้น ถ้าเขียนเป็น onPress แล้วสั่ง window.location เอง เบราว์เซอร์จะ
+ * บล็อกทิ้งเงียบ ๆ ไม่มี error ไม่มีอะไรเกิดขึ้น (อาการ: กดปุ่มแล้วหมุนติ้ว ๆ
+ * แล้วกลับมาหน้าเดิม) — เคยพลาดมาแล้วทั้งแบบมี await คั่นและแบบสั่งตรง ๆ
  *
- * *** ฟังก์ชันนี้ต้องเป็นแบบ "ไม่รออะไรเลย" (ห้ามมี await) และต้องถูกเรียก
- * ทันทีที่นิ้วแตะปุ่ม ***
- * เหตุผล: เบราว์เซอร์ในแอป Facebook/Chrome บนมือถือยอมให้เปิดแอปอื่นได้
- * เฉพาะตอนที่ "ผู้ใช้เพิ่งกดจริง ๆ" เท่านั้น ถ้ามี await คั่นก่อน (เช่นรอโหลด
- * SDK หรือรอเช็คสถานะล็อกอิน) จังหวะนั้นจะหลุดไปแล้ว เบราว์เซอร์จะบล็อกเงียบ ๆ
- * ไม่มี error ไม่มีอะไรเกิดขึ้น — ซึ่งคือสาเหตุที่กดปุ่มแล้วหมุนติ้ว ๆ
- * แล้วกลับมาหน้าเดิมเฉย ๆ
- *
- * คืน true ถ้ากำลังพาออกไปแล้ว (ผู้เรียกไม่ต้องทำอะไรต่อ)
+ * คืน null เมื่อไม่ควรใช้ทางนี้ (เปิดบนคอม / อยู่ในแอป LINE อยู่แล้ว / ยังไม่ตั้งค่า)
  */
-export function jumpToLineApp(): boolean {
-  if (!isLineConfigured() || typeof window === "undefined") return false;
+export function getLineAppUrl(): string | null {
+  if (!isLineConfigured() || typeof window === "undefined") return null;
   // บนคอมไม่มีแอป LINE ให้เปิด — ใช้วิธีล็อกอินผ่านเว็บตามเดิมดีกว่า
-  if (!isMobileWeb()) return false;
+  if (!isMobileWeb()) return null;
   // อยู่ใน LINE อยู่แล้ว ไม่ต้องกระโดดไปไหน
-  if (inLineAppSync()) return false;
+  if (inLineAppSync()) return null;
 
   const token = currentInviteToken();
-  window.location.href = `https://liff.line.me/${LIFF_ID}${token ? `?invite=${encodeURIComponent(token)}` : ""}`;
-  return true;
+  return `https://liff.line.me/${LIFF_ID}${token ? `?invite=${encodeURIComponent(token)}` : ""}`;
 }
 
 /** เปิดหน้าให้ผู้ใช้ล็อกอิน LINE (จะ redirect ออกจากหน้าปัจจุบัน) */
@@ -184,5 +186,37 @@ export async function shareViaLine(text: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/** ลิงก์แอดเพื่อนกับ LINE OA ของเรา — คืน null ถ้ายังไม่ได้ตั้งค่าไอดี OA */
+export function getAddFriendUrl(): string | null {
+  const id = LINE_OA_ID.trim();
+  if (!id) return null;
+  return `https://line.me/R/ti/p/${encodeURIComponent(id.startsWith("@") ? id : `@${id}`)}`;
+}
+
+/**
+ * ผู้ใช้แอดเพื่อนกับ LINE OA ของเราหรือยัง
+ *
+ * ทำไมสำคัญ: ถ้าเขาไม่ได้เป็นเพื่อนกับ OA เราจะส่งข้อความหาเขาไม่ได้เลย
+ * แปลว่าพอเขาปิดแอปไป ก็ไม่มีทางเรียกกลับมาได้อีก — คนที่ตั้งใจจะทำอะไรสักอย่าง
+ * แล้วไม่มีใครเตือน ส่วนใหญ่ก็หายไปเงียบ ๆ
+ *
+ * คืนค่า:
+ *   true  = เป็นเพื่อนแล้ว
+ *   false = ยังไม่ได้แอด
+ *   null  = ตอบไม่ได้ (ไม่ได้เปิดผ่าน LINE / ยังไม่ล็อกอิน / LIFF ยังไม่ได้ผูกกับ OA)
+ *           กรณีนี้ห้ามกั้นผู้ใช้ ไม่งั้นคนที่เข้าด้วยอีเมลปกติจะเข้าแอปไม่ได้เลย
+ */
+export async function getLineFriendship(): Promise<boolean | null> {
+  const liff = await getLiff();
+  if (!liff || !liff.getFriendship || !liff.isLoggedIn()) return null;
+  try {
+    const result = await liff.getFriendship();
+    return !!result?.friendFlag;
+  } catch {
+    // เกิดได้ถ้า LIFF channel ยังไม่ได้ผูกกับ LINE OA ในหน้า LINE Developers
+    return null;
   }
 }

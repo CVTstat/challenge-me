@@ -25,6 +25,7 @@ import InviteFriendScreen from "@/screens/InviteFriendScreen";
 import InviteLandingScreen from "@/screens/InviteLandingScreen";
 import CommunityTreeScreen from "@/screens/CommunityTreeScreen";
 import NotificationsScreen from "@/screens/NotificationsScreen";
+import LineFriendGate from "@/components/LineFriendGate";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -285,7 +286,15 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer ref={navRef} theme={navTheme} onReady={() => setNavReady(true)}>
-      {!session ? <AuthNavigator /> : <MainTabs />}
+      {/* เข้าแอปได้ต่อเมื่อแอดเพื่อนกับ LINE OA แล้ว — ไม่งั้นเราส่งข้อความหาเขาไม่ได้
+          พอปิดแอปไปก็หายไปเลย (ด่านนี้ปล่อยผ่านเองถ้าเช็คไม่ได้ เช่นเข้าด้วยอีเมล) */}
+      {!session ? (
+        <AuthNavigator />
+      ) : (
+        <LineFriendGate>
+          <MainTabs />
+        </LineFriendGate>
+      )}
     </NavigationContainer>
   );
 }
