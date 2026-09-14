@@ -14,7 +14,9 @@ function serviceHeaders() {
 
 /** เรียก Supabase ด้วยสิทธิ์ service role (เฉพาะฝั่งเซิร์ฟเวอร์เท่านั้น) */
 async function supabaseRpc(fn, args) {
-  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  // รับได้ทั้งสองชื่อ: ตอน build ฝั่งเว็บใช้ EXPO_PUBLIC_SUPABASE_URL
+  // แต่บางคนตั้งฝั่งเซิร์ฟเวอร์เป็น SUPABASE_URL เฉย ๆ — เอาอันไหนมีก็ใช้อันนั้น
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const response = await fetch(`${url}/rest/v1/rpc/${fn}`, {
     method: "POST",
     headers: serviceHeaders(),

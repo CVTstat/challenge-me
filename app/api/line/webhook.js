@@ -32,20 +32,73 @@ function readRawBody(req) {
   });
 }
 
-function verifySignature(rawBody, signature) {
-  const secret = process.env.LINE_CHANNEL_SECRET;
-  if (!secret || !signature) return false;
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("base64");
-  // เทียบแบบ timing-safe กันการเดาลายเซ็นทีละไบต์
+function signatureMatches(secret, body, signature) {
+  const expected = crypto.createHmac("sha256", secret).update(body).digest("base64");
   const a = Buffer.from(expected);
   const b = Buffer.from(signature);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * ตรวจลายเซ็นจาก LINE
+ *
+ * ลองเทียบกับ body หลายรูปแบบ เพราะบางสภาพแวดล้อมแปลง JSON ให้เรียบร้อยแล้ว
+ * ก่อนถึงมือเรา ทำให้อ่านไบต์ต้นฉบับไม่ได้ ต้องประกอบกลับเอง ซึ่งอาจได้
+ * ช่องว่างหรือลำดับคีย์ไม่ตรงเป๊ะ — ถ้าเทียบแบบเดียวแล้วพลาด จะกลายเป็น
+ * ปฏิเสธข้อความจริงทิ้งทั้งหมดโดยไม่มีใครรู้สาเหตุ
+ *
+ * ความปลอดภัยไม่ลดลง เพราะทุกแบบยังต้องเซ็นด้วย channel secret ตัวจริงเหมือนเดิม
+ */
+function verifySignature(candidates, signature) {
+  const secret = process.env.LINE_CHANNEL_SECRET;
+  if (!secret || !signature) return false;
+  return candidates.some((body) => {
+    if (typeof body !== "string" || body.length === 0) return false;
+    try {
+      return signatureMatches(secret, body, signature);
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** รูปแบบ body ที่เป็นไปได้ทั้งหมด เอาไว้ลองเทียบลายเซ็น */
+function bodyCandidates(req, raw) {
+  const list = [raw];
+  if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+    try {
+      list.push(JSON.stringify(req.body));
+    } catch {
+      /* ข้ามไป */
+    }
+  }
+  return list.filter(Boolean);
+}
+
+/**
+ * บันทึกผลการตอบกลับลง log
+ *
+ * เหตุผล: ถ้า LINE ปฏิเสธ (เช่น access token ผิด หรือ replyToken หมดอายุ)
+ * ผู้ใช้จะเห็นแค่ "กดแล้วเงียบ" เหมือนกันหมด แยกไม่ออกว่าพังตรงไหน
+ * มี log ไว้ เปิด Vercel → Logs แล้วรู้สาเหตุได้ทันที
+ */
+function logReply(result) {
+  if (result && result.ok) return;
+  console.error("[line-webhook] ตอบกลับไม่สำเร็จ:", result && result.error);
 }
 
 /** ข้อความสรุปสถานะของผู้ใช้คนหนึ่ง — ใช้ตอบกลับแบบไม่กินโควตา */
 async function buildDigestText(lineUserId) {
   const result = await supabaseRpc("line_user_digest", { p_line_user_id: lineUserId });
   const row = Array.isArray(result.data) ? result.data[0] : result.data;
+
+  // 404 จาก PostgREST = ยังไม่มีฟังก์ชันนี้ในฐานข้อมูล แปลว่ายังไม่ได้รัน
+  // migration 0012 — คนละเรื่องกับ "ผู้ใช้ยังไม่ได้ผูกบัญชี" ต้องบอกให้ต่างกัน
+  // ไม่งั้นไล่หาสาเหตุผิดทาง
+  if (result.status === 404) {
+    console.error("[line-webhook] ไม่พบฟังก์ชัน line_user_digest — ยังไม่ได้รัน migration 0012");
+    return `ระบบยังตั้งค่าไม่เสร็จ ลองใหม่อีกครั้งภายหลังนะ\n👉 ${appUrl()}`;
+  }
 
   if (!result.ok || !row || !row.display_name) {
     return (
@@ -79,6 +132,21 @@ async function buildDigestText(lineUserId) {
 }
 
 module.exports = async function handler(req, res) {
+  // โหมดตรวจสุขภาพ: เปิด .../api/line/webhook?check=1 ในเบราว์เซอร์แล้วจะบอกว่า
+  // ตั้งค่าตัวแปรครบหรือยัง — ตอบเป็น true/false เท่านั้น ไม่เผยค่าจริงออกไป
+  // (URL นี้เป็นสาธารณะ ใครเปิดก็ได้ จึงห้ามแสดงค่า secret เด็ดขาด)
+  if (req.method === "GET" && req.query && req.query.check) {
+    res.status(200).json({
+      ok: true,
+      secretConfigured: Boolean(process.env.LINE_CHANNEL_SECRET),
+      tokenConfigured: Boolean(process.env.LINE_CHANNEL_ACCESS_TOKEN),
+      supabaseUrlConfigured: Boolean(process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL),
+      supabaseKeyConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      appUrlConfigured: Boolean(appUrl()),
+    });
+    return;
+  }
+
   if (req.method !== "POST") {
     res.status(405).send("method not allowed");
     return;
@@ -87,7 +155,7 @@ module.exports = async function handler(req, res) {
   const rawBody = await readRawBody(req);
   const signature = req.headers["x-line-signature"];
 
-  if (!verifySignature(rawBody, signature)) {
+  if (!verifySignature(bodyCandidates(req, rawBody), signature)) {
     // ตอบ 401 เฉย ๆ ไม่ต้องบอกรายละเอียดว่าพลาดตรงไหน
     res.status(401).send("invalid signature");
     return;
@@ -102,17 +170,22 @@ module.exports = async function handler(req, res) {
 
   const events = Array.isArray(payload.events) ? payload.events : [];
 
-  // ตอบ 200 ให้ LINE ก่อนเสมอ แม้จะยังประมวลผลไม่เสร็จ
-  // ถ้าตอบช้าหรือตอบ error LINE จะพยายามส่งซ้ำ และอาจปิด webhook ให้เอง
-  res.status(200).send("ok");
-
+  // สำคัญมาก: ต้องตอบกลับ LINE ให้เสร็จ "ก่อน" ที่จะปิด response
+  //
+  // เดิมโค้ดตอบ 200 ให้ LINE ก่อนแล้วค่อยไปทำงานต่อ ซึ่งเป็นวิธีที่ใช้ได้บน
+  // เซิร์ฟเวอร์ที่รันค้างไว้ตลอด แต่บน Vercel ฟังก์ชันเป็นแบบ serverless —
+  // พอส่ง response ออกไปแล้ว ระบบอาจ "แช่แข็ง" ฟังก์ชันทันที งานที่ค้างอยู่
+  // (การยิงข้อความตอบกลับไปหา LINE) จึงอาจไม่ถูกทำเลย
+  // อาการที่ผู้ใช้เห็นคือ "กดปุ่มแล้วเงียบ" ทั้งที่ไม่มี error ที่ไหนเลย
+  //
+  // ทำให้เสร็จก่อนค่อยตอบ 200 ใช้เวลาไม่ถึงวินาที ยังทันเวลาที่ LINE รอ
   for (const event of events) {
     const lineUserId = event.source && event.source.userId;
     if (!lineUserId || !event.replyToken) continue;
 
     try {
       if (event.type === "follow") {
-        await replyMessage(event.replyToken, [
+        logReply(await replyMessage(event.replyToken, [
           {
             type: "text",
             text:
@@ -120,7 +193,7 @@ module.exports = async function handler(req, res) {
               "เปลี่ยนสิ่งที่อยากทำ ให้กลายเป็นสิ่งที่ทำสำเร็จ\n\n" +
               `กดเปิดแอปแล้วเข้าสู่ระบบด้วย LINE หนึ่งครั้ง เพื่อรับการแจ้งเตือนที่นี่\n👉 ${appUrl()}`,
           },
-        ]);
+        ]));
         continue;
       }
 
@@ -128,10 +201,16 @@ module.exports = async function handler(req, res) {
       // ให้ตอบสรุปสถานะกลับไป — ฟรี ไม่กินโควตา
       if (event.type === "message" || event.type === "postback") {
         const text = await buildDigestText(lineUserId);
-        await replyMessage(event.replyToken, [{ type: "text", text }]);
+        logReply(await replyMessage(event.replyToken, [{ type: "text", text }]));
       }
-    } catch {
+    } catch (error) {
       // ห้ามให้ event เดียวพังแล้วลากทั้งชุดล่ม — ข้ามไปทำอันถัดไป
+      // แต่ต้องทิ้งร่องรอยไว้ใน Vercel Logs ไม่งั้นเวลาเงียบจะหาสาเหตุไม่เจอ
+      console.error("[line-webhook] จัดการ event ไม่สำเร็จ:", error && error.message);
     }
   }
+
+  // ตอบ 200 เสมอ ถึงจะมี event ไหนพลาดไปก็ตาม
+  // ถ้าตอบ error กลับไป LINE จะส่งซ้ำเรื่อย ๆ และอาจปิด webhook ให้เอง
+  res.status(200).send("ok");
 };

@@ -29,7 +29,7 @@ function json(res, status, body) {
 }
 
 async function supabaseAdmin(path, options = {}) {
-  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const response = await fetch(`${url}${path}`, {
     ...options,
@@ -55,7 +55,7 @@ module.exports = async function handler(req, res) {
     return json(res, 405, { error: "method not allowed" });
   }
 
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const lineChannelId = process.env.LINE_LOGIN_CHANNEL_ID;
 
