@@ -85,7 +85,12 @@ export async function startLineLogin() {
   const liff = await getLiff();
   if (!liff) return false;
   if (!liff.isLoggedIn()) {
-    liff.login();
+    // ระบุ redirectUri ให้ชัด เพื่อให้กลับมาที่ "หน้าเดิม" พร้อม token คำท้า
+    // ที่ติดมาใน URL (เช่น /invite/abc123) ถ้าปล่อยว่างแล้วกลับมาหน้าแรกเฉย ๆ
+    // คนที่กดลิงก์คำท้ามาจะเสียคำท้าไปกลางทางโดยไม่รู้ตัว
+    const redirectUri =
+      typeof window !== "undefined" && window.location ? window.location.href : undefined;
+    liff.login(redirectUri ? { redirectUri } : undefined);
     return true;
   }
   return true;

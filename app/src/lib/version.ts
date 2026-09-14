@@ -7,5 +7,5 @@
  *
  * วิธีใช้: เปิดหน้า Me เลื่อนลงล่างสุด ถ้าเลขตรงกับที่คุยกันไว้ = ของใหม่ขึ้นแล้ว
  */
-export const APP_VERSION = "2026.09.14-2";
-export const APP_VERSION_LABEL = "แก้ LINE ตอบกลับ";
+export const APP_VERSION = "2026.09.14-3";
+export const APP_VERSION_LABEL = "เข้าผ่าน LINE ได้ทุกหน้า";

@@ -6,6 +6,7 @@ import type { AuthStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
 import DarumaCanvas from "@/components/DarumaCanvas";
 import { PrimaryButton } from "@/components/ui";
+import LineLoginButton, { LineOrDivider } from "@/components/LineLoginButton";
 import { colors, font, radius, spacing } from "@/theme";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
@@ -44,6 +45,11 @@ export default function RegisterScreen({ navigation }: Props) {
       <Text style={styles.subtitle}>ดารุมะของคุณรออยู่ — อีกไม่กี่ขั้นก็เริ่มได้เลย</Text>
 
       <View style={styles.form}>
+        {/* สมัครด้วย LINE — ทางที่สั้นที่สุดสำหรับคนที่เพิ่งกดลิงก์คำท้าเข้ามา
+            ไม่ต้องคิดรหัสผ่าน ไม่ต้องรอยืนยันอีเมล และได้รับแจ้งเตือนทาง LINE เลย */}
+        <LineLoginButton label="สมัครด้วย LINE" />
+        <LineOrDivider />
+
         <TextInput
           style={styles.input}
           placeholder="ชื่อที่แสดง"

@@ -8,6 +8,8 @@ import type { RootStackParamList } from "@/navigation/RootNavigator";
 import { useAuth } from "@/providers/AuthProvider";
 import { usePendingInvite } from "@/providers/PendingInviteProvider";
 import { acceptChallengeInviteByToken, getInvitePreview } from "@/api/invites";
+import LineLoginButton from "@/components/LineLoginButton";
+import { isLineConfigured } from "@/lib/liff";
 import type { InvitePreview } from "@/types/database";
 
 // หน้าแลนดิ้งตอนมีคนกดลิงก์ "ท้าเพื่อน" — ใช้ทั้งตอน login แล้วและยังไม่ login
@@ -102,11 +104,28 @@ export default function InviteLandingScreen() {
       <Text style={styles.goal}>{preview.goal_description}</Text>
       {preview.reward_text ? <Text style={styles.reward}>🎁 {preview.reward_text}</Text> : null}
 
-      <Pressable style={styles.primaryButton} onPress={handleAccept} disabled={busy}>
-        <Text style={styles.primaryButtonText}>
-          {session?.user ? "🌱 รับคำท้า — เริ่มปลูกเลย" : "สมัครสมาชิกเพื่อรับคำท้า"}
-        </Text>
-      </Pressable>
+      {/* คนที่กดลิงก์นี้เข้ามาส่วนใหญ่ยังไม่เคยใช้แอป และมักกดมาจากในแอป LINE
+          หรือ Facebook — ถ้าให้เจอฟอร์มอีเมล/รหัสผ่านทันทีจะหลุดไปเกือบหมด
+          จึงเอา "เข้าร่วมด้วย LINE" ขึ้นเป็นปุ่มแรก แล้วค่อยมีทางอีเมลรองไว้
+          (autoTry ปิดไว้ เพราะหน้านี้ต้องให้เขาได้อ่านคำท้าก่อน ไม่ใช่โดน
+          เด้งไปล็อกอินตั้งแต่ยังไม่ทันเห็นว่าใครท้าอะไร) */}
+      {session?.user ? (
+        <Pressable style={styles.primaryButton} onPress={handleAccept} disabled={busy}>
+          <Text style={styles.primaryButtonText}>🌱 รับคำท้า — เริ่มปลูกเลย</Text>
+        </Pressable>
+      ) : (
+        <>
+          <LineLoginButton label="เข้าร่วมด้วย LINE" autoTry={false} />
+          <Pressable
+            style={isLineConfigured() ? styles.secondaryButton : styles.primaryButton}
+            onPress={handleAccept}
+          >
+            <Text style={isLineConfigured() ? styles.secondaryButtonText : styles.primaryButtonText}>
+              {isLineConfigured() ? "หรือสมัครด้วยอีเมล" : "สมัครสมาชิกเพื่อรับคำท้า"}
+            </Text>
+          </Pressable>
+        </>
+      )}
       <Pressable style={styles.secondaryButton} onPress={handleSkip}>
         <Text style={styles.secondaryButtonText}>ไว้ก่อน</Text>
       </Pressable>
