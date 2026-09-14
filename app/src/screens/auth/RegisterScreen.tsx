@@ -90,7 +90,9 @@ const styles = StyleSheet.create({
   mascot: { marginBottom: spacing.md },
   title: { fontSize: font.h2, fontWeight: "800", color: colors.text, textAlign: "center" },
   subtitle: { fontSize: font.small, color: colors.textMuted, marginTop: 4, marginBottom: spacing.xl },
-  form: { alignSelf: "stretch", gap: spacing.md, maxWidth: 420, width: "100%" },
+  // เหตุผลเดียวกับหน้า Login — ห้ามใส่ alignSelf: "stretch" ไม่งั้นฟอร์มจะ
+  // ไปชิดขอบซ้ายบนจอกว้าง
+  form: { gap: spacing.md, maxWidth: 420, width: "100%" },
   input: {
     borderWidth: 1,
     borderColor: colors.border,

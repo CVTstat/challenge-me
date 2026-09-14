@@ -57,6 +57,17 @@ export const radius = {
   pill: 999,
 } as const;
 
+// ความกว้างสูงสุดของเนื้อหา
+//
+// แอปนี้ออกแบบมาสำหรับมือถือ แต่เปิดบนคอมได้ด้วย (เป็นเว็บ) ถ้าไม่จำกัดความกว้าง
+// เนื้อหาจะยืดเต็มจอ 2000px กลายเป็นแถวยาวเหยียดที่อ่านยากมาก
+// จำกัดไว้แล้วจัดกึ่งกลาง จะได้หน้าตาเหมือนเปิดในมือถือแม้อยู่บนจอใหญ่
+export const layout = {
+  maxContent: 560,
+  /** ใส่กับ contentContainerStyle ของ ScrollView/FlatList ทุกหน้าหลัก */
+  centered: { width: "100%" as const, maxWidth: 560, alignSelf: "center" as const },
+} as const;
+
 export const font = {
   h1: 26,
   h2: 20,

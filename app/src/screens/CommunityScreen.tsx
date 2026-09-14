@@ -8,7 +8,7 @@ import type { RootStackParamList } from "@/navigation/RootNavigator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
-import { colors, font, radius, spacing } from "@/theme";
+import { colors, font, layout, radius, spacing } from "@/theme";
 import { listOpenCommunityHelpRequests } from "@/api/community";
 import {
   listChallengesImSupporting,
@@ -187,7 +187,7 @@ export default function CommunityScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
+  list: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
   header: { fontSize: font.h1, fontWeight: "800", color: colors.text },
   subheader: { fontSize: font.small, color: colors.textMuted, marginTop: 2 },
 

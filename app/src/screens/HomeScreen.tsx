@@ -17,7 +17,7 @@ import TreeCanvas, { nextMilestone, TREE_CAPACITY } from "@/components/TreeCanva
 import { Avatar, Card, EmptyState, ProgressBar, SectionTitle } from "@/components/ui";
 import { categoryIcon } from "@/lib/categories";
 import { isAccumulative } from "@/lib/measurement";
-import { colors, font, radius, spacing } from "@/theme";
+import { colors, font, layout, radius, spacing } from "@/theme";
 import type { ChallengeRow } from "@/types/database";
 
 type ProgressMap = Record<string, { totalCheckIns: number; totalValue: number }>;
@@ -212,7 +212,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
+  list: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
 
   greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
   greetHello: { fontSize: font.h3, fontWeight: "800", color: colors.text },

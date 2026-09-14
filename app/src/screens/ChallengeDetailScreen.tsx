@@ -13,7 +13,7 @@ import { completeMilestone, computeJourneyProgressPct, listMilestones } from "@/
 import { getChallengeProgress } from "@/api/progress";
 import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
 import { ProgressRing, StatTile } from "@/components/ui";
-import { colors, font, radius, shadow, spacing } from "@/theme";
+import { colors, font, layout, radius, shadow, spacing } from "@/theme";
 import {
   checkInLabel,
   isAccumulative,
@@ -613,7 +613,7 @@ const cardBase = {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
+  container: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
 
   // ── หัวหน้า: ดารุมะ + ชื่อเป้าหมาย ──────────────────────────────────────

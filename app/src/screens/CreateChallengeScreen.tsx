@@ -20,7 +20,7 @@ import {
 import { CHALLENGE_CATEGORIES } from "@/lib/categories";
 import CategoryPicker from "@/components/CategoryPicker";
 import { PrimaryButton } from "@/components/ui";
-import { colors, font, radius, shadow, spacing } from "@/theme";
+import { colors, font, layout, radius, shadow, spacing } from "@/theme";
 import type { ChallengeType, MeasurementType } from "@/types/database";
 
 const MEASUREMENT_OPTIONS: { value: MeasurementType; label: string }[] = [
@@ -380,7 +380,7 @@ export default function CreateChallengeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  container: { paddingHorizontal: spacing.lg, paddingBottom: 40, gap: 6 },
+  container: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: 40, gap: 6 },
   heading: { fontSize: font.h1, fontWeight: "800", color: colors.text },
   subheading: { fontSize: font.small, color: colors.textMuted, marginBottom: spacing.md },
   label: { fontWeight: "700", marginTop: spacing.lg, color: colors.text, fontSize: font.body },

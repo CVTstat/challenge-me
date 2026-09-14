@@ -11,7 +11,7 @@ import { getTreeStats } from "@/api/tree";
 import type { TreeStats } from "@/api/tree";
 import TreeCanvas, { nextMilestone, TREE_CAPACITY } from "@/components/TreeCanvas";
 import { Card, EmptyState, PrimaryButton, SectionTitle, StatTile } from "@/components/ui";
-import { colors, font, radius, spacing } from "@/theme";
+import { colors, font, layout, radius, spacing } from "@/theme";
 import type { GlobalChallengeRow } from "@/types/database";
 
 const CONTACT_EMAIL = "cvtstat@gmail.com";
@@ -154,7 +154,7 @@ export default function GlobalScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
+  list: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: 32, gap: spacing.md },
   header: { fontSize: font.h1, fontWeight: "800", color: colors.text },
   subheader: { fontSize: font.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.lg },
 

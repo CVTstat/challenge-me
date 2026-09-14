@@ -7,5 +7,5 @@
  *
  * วิธีใช้: เปิดหน้า Me เลื่อนลงล่างสุด ถ้าเลขตรงกับที่คุยกันไว้ = ของใหม่ขึ้นแล้ว
  */
-export const APP_VERSION = "2026.09.13-14";
-export const APP_VERSION_LABEL = "แจ้งเตือน + LINE";
+export const APP_VERSION = "2026.09.14-1";
+export const APP_VERSION_LABEL = "จัดกลางจอ";

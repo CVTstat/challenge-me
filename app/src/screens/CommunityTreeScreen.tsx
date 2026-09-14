@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import TreeCanvas, { nextMilestone, TREE_CAPACITY } from "@/components/TreeCanvas";
 import DarumaCanvas, { darumaEyesFrom } from "@/components/DarumaCanvas";
 import { ProgressBar, StatTile } from "@/components/ui";
-import { colors, font, radius, shadow, spacing } from "@/theme";
+import { colors, font, layout, radius, shadow, spacing } from "@/theme";
 import { getTreeStats } from "@/api/tree";
 import type { TreeStats } from "@/api/tree";
 import type { DarumaRow } from "@/types/database";
@@ -146,7 +146,7 @@ export default function CommunityTreeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: spacing.lg, paddingBottom: 40 },
+  container: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", padding: spacing.lg, paddingBottom: 40 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
   title: { fontSize: font.h2, fontWeight: "800", textAlign: "center", color: colors.text },
   subtitle: { color: colors.textMuted, textAlign: "center", marginTop: 4, fontSize: font.small },

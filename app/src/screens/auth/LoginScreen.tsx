@@ -156,7 +156,11 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     marginBottom: spacing.xl,
   },
-  form: { alignSelf: "stretch", gap: spacing.md, maxWidth: 420, width: "100%", alignItems: "stretch" },
+  // ห้ามใส่ alignSelf: "stretch" ตรงนี้ — มันจะไปทับ alignItems: "center" ของ
+  // กล่องแม่ ทำให้ฟอร์มถูกดันไปชิดขอบซ้ายเวลาเปิดบนจอกว้าง (ส่วนหัวอยู่กลาง
+  // แต่ฟอร์มไปอยู่ซ้าย) ปล่อยให้ alignSelf เป็นค่าเริ่มต้นแล้วใช้ width + maxWidth
+  // ฟอร์มจะกว้างเต็มที่บนมือถือ และอยู่กึ่งกลางเสมอบนจอใหญ่
+  form: { gap: spacing.md, maxWidth: 420, width: "100%" },
   input: {
     borderWidth: 1,
     borderColor: colors.border,

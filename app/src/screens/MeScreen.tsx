@@ -10,7 +10,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import TreeCanvas, { nextMilestone } from "@/components/TreeCanvas";
 import { Avatar, Card, ProgressBar, StatTile } from "@/components/ui";
-import { colors, font, radius, spacing } from "@/theme";
+import { colors, font, layout, radius, spacing } from "@/theme";
 import { APP_VERSION, APP_VERSION_LABEL } from "@/lib/version";
 import type { DarumaRow, ProfileRow } from "@/types/database";
 
@@ -192,7 +192,7 @@ function MenuRow({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
+  content: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: 40 },
 
   profileRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
   name: { fontSize: font.h2, fontWeight: "800", color: colors.text },

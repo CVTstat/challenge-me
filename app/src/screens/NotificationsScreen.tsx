@@ -14,7 +14,7 @@ import {
 } from "@/api/notifications";
 import type { NotificationRow } from "@/api/notifications";
 import { Card, EmptyState } from "@/components/ui";
-import { colors, font, radius, spacing } from "@/theme";
+import { colors, font, layout, radius, spacing } from "@/theme";
 
 // กล่องแจ้งเตือน — เรื่องที่คนอื่นทำแล้วเกี่ยวข้องกับเรา
 // กดแต่ละรายการแล้วพาไปยังหน้าที่เกี่ยวข้อง พร้อมทำเครื่องหมายว่าอ่านแล้ว
@@ -117,7 +117,7 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  list: { padding: spacing.lg, paddingBottom: 32, gap: spacing.sm },
+  list: { width: "100%", maxWidth: layout.maxContent, alignSelf: "center", padding: spacing.lg, paddingBottom: 32, gap: spacing.sm },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
