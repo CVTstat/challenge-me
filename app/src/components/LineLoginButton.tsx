@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { showAlert } from "@/lib/alert";
-import { isLineConfigured, startLineLogin } from "@/lib/liff";
+import { isLineConfigured, openInLineApp, startLineLogin } from "@/lib/liff";
 import { signInWithLine } from "@/api/lineAuth";
 import { colors, font, radius, shadow, spacing } from "@/theme";
 
@@ -43,9 +43,15 @@ export default function LineLoginButton({ label = "เข้าสู่ระ�
 
     if (result.ok) return;
     if (result.needsLineLogin) {
-      // ยังไม่ได้ล็อกอิน LINE — ตอนกดเองค่อยพาไปหน้าล็อกอินของ LINE
+      // ยังไม่ได้ล็อกอิน LINE — ตอนกดเองค่อยพาออกไป
       // (ตอนลองเงียบ ๆ ห้าม redirect ไม่งั้นคนที่อยากใช้อีเมลจะโดนลากไปด้วย)
-      if (!silent) await startLineLogin();
+      if (!silent) {
+        // บนมือถือ: กระโดดเข้าแอป LINE ไปเลย ผู้ใช้ล็อกอินค้างอยู่แล้ว
+        // ไม่ต้องเจอหน้าให้กรอกอีเมล+รหัสผ่าน LINE ซึ่งแทบไม่มีใครจำได้
+        const jumped = await openInLineApp();
+        // บนคอม (หรือกระโดดไม่ได้) ค่อยใช้หน้าล็อกอินผ่านเว็บตามเดิม
+        if (!jumped) await startLineLogin();
+      }
       return;
     }
     if (result.error && !silent) showAlert("เข้าสู่ระบบด้วย LINE ไม่สำเร็จ", result.error);
@@ -68,11 +74,11 @@ export default function LineLoginButton({ label = "เข้าสู่ระ�
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{label}</Text>}
       </Pressable>
 
-      {/* เบราว์เซอร์ในแอป Facebook มักบล็อกการ redirect ไปล็อกอินของ LINE
-          ถ้าไม่บอกไว้ ผู้ใช้จะเจอ "กดแล้วไม่เกิดอะไรขึ้น" แล้วเลิกไปเฉย ๆ */}
+      {/* ในแอป Facebook การเปิดแอปอื่นจะมีกล่องถามยืนยันก่อนเสมอ (iOS บังคับ)
+          บอกไว้ล่วงหน้าว่ากล่องนี้ปกติ ไม่ใช่ error — ไม่งั้นหลายคนจะกด Cancel */}
       {inEmbeddedBrowser() && (
         <Text style={styles.hint}>
-          ถ้ากดแล้วไม่ไปต่อ ให้กดปุ่ม ••• มุมขวาบน แล้วเลือก &quot;เปิดในเบราว์เซอร์&quot;
+          ถ้ามีกล่องถามว่าจะเปิดแอปข้างนอกไหม ให้กด &quot;Open&quot; เพื่อเข้าผ่านแอป LINE
         </Text>
       )}
     </View>

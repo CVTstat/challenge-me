@@ -80,6 +80,52 @@ export function getLiff(): Promise<LiffSdk | null> {
   return initPromise;
 }
 
+/** อยู่บนมือถือไหม — ใช้ตัดสินว่าจะ "กระโดดเข้าแอป LINE" ได้หรือเปล่า */
+function isMobileWeb(): boolean {
+  if (Platform.OS !== "web" || typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+}
+
+/** ดึง token คำท้าจาก URL ปัจจุบัน (รองรับทั้งแบบ path และแบบ query) */
+function currentInviteToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const url = new URL(window.location.href);
+    const fromQuery = url.searchParams.get("invite");
+    if (fromQuery) return fromQuery;
+    const match = url.pathname.match(/invite\/([A-Za-z0-9-]+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * เปิดแอปนี้ "ข้างในแอป LINE" แทนการล็อกอินผ่านเว็บ
+ *
+ * ทำไมต้องมี: เวลาคนกดลิงก์จากในแอป Facebook แล้วกดปุ่มเข้าสู่ระบบด้วย LINE
+ * วิธีปกติจะพาไปหน้า access.line.me ที่ต้องพิมพ์อีเมล+รหัสผ่าน LINE ซึ่งแทบ
+ * ไม่มีใครจำได้ (คนส่วนใหญ่ล็อกอิน LINE ค้างไว้ในแอปมือถืออยู่แล้ว ไม่เคย
+ * ต้องใช้รหัสผ่าน) สุดท้ายต้องกด "Log-in with LINE app" อีกต่อหนึ่งกว่าจะเข้าได้
+ *
+ * ลิงก์ liff.line.me สั่งให้มือถือเปิดแอป LINE ขึ้นมาตรง ๆ แล้วโหลดหน้าเราข้างใน
+ * ซึ่งผู้ใช้ล็อกอินอยู่แล้ว จึงข้ามเรื่องรหัสผ่านไปได้ทั้งหมด
+ *
+ * คืน true ถ้ากำลังพาออกไปแล้ว (ผู้เรียกไม่ต้องทำอะไรต่อ)
+ */
+export async function openInLineApp(): Promise<boolean> {
+  if (!isLineConfigured() || typeof window === "undefined") return false;
+  // บนคอมไม่มีแอป LINE ให้เปิด — ใช้วิธีล็อกอินผ่านเว็บตามเดิมดีกว่า
+  if (!isMobileWeb()) return false;
+
+  const liff = await getLiff();
+  if (liff && liff.isInClient()) return false; // อยู่ใน LINE อยู่แล้ว ไม่ต้องกระโดด
+
+  const token = currentInviteToken();
+  window.location.href = `https://liff.line.me/${LIFF_ID}${token ? `?invite=${encodeURIComponent(token)}` : ""}`;
+  return true;
+}
+
 /** เปิดหน้าให้ผู้ใช้ล็อกอิน LINE (จะ redirect ออกจากหน้าปัจจุบัน) */
 export async function startLineLogin() {
   const liff = await getLiff();
