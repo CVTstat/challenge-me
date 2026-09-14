@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 import TreeCanvas, { nextMilestone } from "@/components/TreeCanvas";
 import { Avatar, Card, ProgressBar, StatTile } from "@/components/ui";
 import { colors, font, layout, radius, spacing } from "@/theme";
-import { APP_VERSION, APP_VERSION_LABEL } from "@/lib/version";
+import { APP_VERSION } from "@/lib/version";
 import type { DarumaRow, ProfileRow } from "@/types/database";
 
 // หน้านี้รวมทั้งสองสัญลักษณ์ของแอปไว้ด้วยกัน (ดู DarumaCanvas สำหรับเหตุผล):
@@ -164,7 +164,7 @@ export default function MeScreen() {
 
       {/* ตัวบอกเวอร์ชัน — ใช้เช็คว่าโค้ดใหม่ขึ้นเว็บแล้วจริงหรือยัง */}
       <Text style={styles.version}>
-        เวอร์ชัน {APP_VERSION} · {APP_VERSION_LABEL}
+        เวอร์ชัน {APP_VERSION}
       </Text>
     </ScrollView>
   );

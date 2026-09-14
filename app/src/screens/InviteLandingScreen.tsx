@@ -45,6 +45,9 @@ export default function InviteLandingScreen() {
 
   async function handleAccept() {
     if (!token) return;
+    // รับคำท้าของตัวเองไม่ได้ — ฝั่งฐานข้อมูลกันไว้แล้ว (migration 0013)
+    // ตรงนี้กันซ้ำเพื่อไม่ให้ผู้ใช้เจอข้อความ error ดิบ ๆ เด้งขึ้นมา
+    if (preview?.is_own_challenge) return;
     if (!session?.user) {
       navigation.navigate("Register" as never);
       return;
@@ -99,11 +102,32 @@ export default function InviteLandingScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.badge}>🌱 คำท้าจาก {preview.inviter_display_name}</Text>
+      <Text style={styles.badge}>
+        {preview.is_own_challenge ? "🌱 คำท้าของคุณ" : `🌱 คำท้าจาก ${preview.inviter_display_name}`}
+      </Text>
       <Text style={styles.title}>{preview.title}</Text>
       <Text style={styles.goal}>{preview.goal_description}</Text>
       {preview.reward_text ? <Text style={styles.reward}>🎁 {preview.reward_text}</Text> : null}
 
+      {/* เจ้าของกดลิงก์ของตัวเอง — เกิดบ่อยมากเวลาทดลองแชร์ดูว่าเพื่อนจะเห็นอะไร
+          ถ้าปล่อยให้กดรับได้ จะได้คำท้าซ้ำอีกใบพร้อมดารุมะอีกตัวโดยไม่ตั้งใจ
+          (ใบไม้ต้องมาจากสิ่งที่ทำสำเร็จจริงเท่านั้น ไม่ใช่จากการกดลิงก์ตัวเอง)
+          จึงเปลี่ยนเป็นบอกให้รู้ว่าลิงก์ใช้ได้ปกติ แล้วชี้ทางต่อแทน */}
+      {preview.is_own_challenge ? (
+        <>
+          <Text style={styles.ownNote}>
+            นี่คือคำท้าของคุณเอง — รับคำท้าตัวเองไม่ได้ ส่งลิงก์นี้ให้เพื่อนได้เลย
+            หน้าตาที่เพื่อนเห็นก็คือหน้านี้แหละ
+          </Text>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => navigation.replace("ChallengeDetail", { challengeId: preview.challenge_id })}
+          >
+            <Text style={styles.primaryButtonText}>เปิดคำท้าของฉัน</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
       {/* คนที่กดลิงก์นี้เข้ามาส่วนใหญ่ยังไม่เคยใช้แอป และมักกดมาจากในแอป LINE
           หรือ Facebook — ถ้าให้เจอฟอร์มอีเมล/รหัสผ่านทันทีจะหลุดไปเกือบหมด
           จึงเอา "เข้าร่วมด้วย LINE" ขึ้นเป็นปุ่มแรก แล้วค่อยมีทางอีเมลรองไว้
@@ -126,6 +150,8 @@ export default function InviteLandingScreen() {
           </Pressable>
         </>
       )}
+        </>
+      )}
       <Pressable style={styles.secondaryButton} onPress={handleSkip}>
         <Text style={styles.secondaryButtonText}>ไว้ก่อน</Text>
       </Pressable>
@@ -144,4 +170,14 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: "white", textAlign: "center", fontWeight: "700", fontSize: 16 },
   secondaryButton: { padding: 12 },
   secondaryButtonText: { color: "#6b7f70", textAlign: "center" },
+  ownNote: {
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: "#eef6f0",
+    borderWidth: 1,
+    borderColor: "#cfe6d6",
+    color: "#3d5647",
+    lineHeight: 21,
+  },
 });

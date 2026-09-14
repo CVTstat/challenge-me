@@ -331,6 +331,8 @@ export interface InvitePreview {
   category: string;
   type: ChallengeType;
   inviter_display_name: string;
+  /** คนที่เปิดลิงก์อยู่ตอนนี้คือเจ้าของคำท้าเองหรือเปล่า (ดู migration 0013) */
+  is_own_challenge: boolean;
 }
 
 // Minimal Supabase-style Database interface — เพียงพอให้ createClient<Database>()
