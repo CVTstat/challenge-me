@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { showAlert } from "@/lib/alert";
-import { isLineConfigured, openInLineApp, startLineLogin } from "@/lib/liff";
+import { isLineConfigured, jumpToLineApp, startLineLogin } from "@/lib/liff";
 import { signInWithLine } from "@/api/lineAuth";
 import { colors, font, radius, shadow, spacing } from "@/theme";
 
@@ -43,15 +43,11 @@ export default function LineLoginButton({ label = "เข้าสู่ระ�
 
     if (result.ok) return;
     if (result.needsLineLogin) {
-      // ยังไม่ได้ล็อกอิน LINE — ตอนกดเองค่อยพาออกไป
-      // (ตอนลองเงียบ ๆ ห้าม redirect ไม่งั้นคนที่อยากใช้อีเมลจะโดนลากไปด้วย)
-      if (!silent) {
-        // บนมือถือ: กระโดดเข้าแอป LINE ไปเลย ผู้ใช้ล็อกอินค้างอยู่แล้ว
-        // ไม่ต้องเจอหน้าให้กรอกอีเมล+รหัสผ่าน LINE ซึ่งแทบไม่มีใครจำได้
-        const jumped = await openInLineApp();
-        // บนคอม (หรือกระโดดไม่ได้) ค่อยใช้หน้าล็อกอินผ่านเว็บตามเดิม
-        if (!jumped) await startLineLogin();
-      }
+      // ยังไม่ได้ล็อกอิน LINE — พาไปหน้าล็อกอินผ่านเว็บ
+      // (ทางมือถือจัดการไปแล้วตั้งแต่ handlePress ซึ่งกระโดดเข้าแอป LINE เลย
+      //  มาถึงตรงนี้คือเปิดบนคอม หรือกระโดดไม่ได้)
+      // ตอนลองเงียบ ๆ ห้าม redirect ไม่งั้นคนที่อยากใช้อีเมลจะโดนลากไปด้วย
+      if (!silent) await startLineLogin();
       return;
     }
     if (result.error && !silent) showAlert("เข้าสู่ระบบด้วย LINE ไม่สำเร็จ", result.error);
@@ -62,13 +58,25 @@ export default function LineLoginButton({ label = "เข้าสู่ระ�
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [available, autoTry]);
 
+  /**
+   * จังหวะที่นิ้วแตะปุ่ม
+   *
+   * บนมือถือต้องสั่งเปิดแอป LINE "เดี๋ยวนั้นเลย" ห้ามมี await มาคั่นก่อน
+   * เพราะเบราว์เซอร์อนุญาตให้เปิดแอปอื่นเฉพาะตอนที่ผู้ใช้เพิ่งกดเท่านั้น
+   * (ดูคำอธิบายเต็มที่ jumpToLineApp ใน lib/liff.ts)
+   */
+  function handlePress() {
+    if (jumpToLineApp()) return;
+    attempt(false);
+  }
+
   if (!available) return null;
 
   return (
     <View style={style}>
       <Pressable
         style={({ pressed }) => [styles.button, pressed && { opacity: 0.9 }]}
-        onPress={() => attempt(false)}
+        onPress={handlePress}
         disabled={busy}
       >
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{label}</Text>}

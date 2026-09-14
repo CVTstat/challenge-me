@@ -100,6 +100,12 @@ function currentInviteToken(): string | null {
   }
 }
 
+/** เปิดอยู่ข้างในแอป LINE ไหม — ดูจาก User-Agent เพื่อให้ตอบได้ทันทีแบบไม่ต้องรอ */
+function inLineAppSync(): boolean {
+  if (Platform.OS !== "web" || typeof navigator === "undefined") return false;
+  return /\bLine\//i.test(navigator.userAgent || "");
+}
+
 /**
  * เปิดแอปนี้ "ข้างในแอป LINE" แทนการล็อกอินผ่านเว็บ
  *
@@ -111,15 +117,22 @@ function currentInviteToken(): string | null {
  * ลิงก์ liff.line.me สั่งให้มือถือเปิดแอป LINE ขึ้นมาตรง ๆ แล้วโหลดหน้าเราข้างใน
  * ซึ่งผู้ใช้ล็อกอินอยู่แล้ว จึงข้ามเรื่องรหัสผ่านไปได้ทั้งหมด
  *
+ * *** ฟังก์ชันนี้ต้องเป็นแบบ "ไม่รออะไรเลย" (ห้ามมี await) และต้องถูกเรียก
+ * ทันทีที่นิ้วแตะปุ่ม ***
+ * เหตุผล: เบราว์เซอร์ในแอป Facebook/Chrome บนมือถือยอมให้เปิดแอปอื่นได้
+ * เฉพาะตอนที่ "ผู้ใช้เพิ่งกดจริง ๆ" เท่านั้น ถ้ามี await คั่นก่อน (เช่นรอโหลด
+ * SDK หรือรอเช็คสถานะล็อกอิน) จังหวะนั้นจะหลุดไปแล้ว เบราว์เซอร์จะบล็อกเงียบ ๆ
+ * ไม่มี error ไม่มีอะไรเกิดขึ้น — ซึ่งคือสาเหตุที่กดปุ่มแล้วหมุนติ้ว ๆ
+ * แล้วกลับมาหน้าเดิมเฉย ๆ
+ *
  * คืน true ถ้ากำลังพาออกไปแล้ว (ผู้เรียกไม่ต้องทำอะไรต่อ)
  */
-export async function openInLineApp(): Promise<boolean> {
+export function jumpToLineApp(): boolean {
   if (!isLineConfigured() || typeof window === "undefined") return false;
   // บนคอมไม่มีแอป LINE ให้เปิด — ใช้วิธีล็อกอินผ่านเว็บตามเดิมดีกว่า
   if (!isMobileWeb()) return false;
-
-  const liff = await getLiff();
-  if (liff && liff.isInClient()) return false; // อยู่ใน LINE อยู่แล้ว ไม่ต้องกระโดด
+  // อยู่ใน LINE อยู่แล้ว ไม่ต้องกระโดดไปไหน
+  if (inLineAppSync()) return false;
 
   const token = currentInviteToken();
   window.location.href = `https://liff.line.me/${LIFF_ID}${token ? `?invite=${encodeURIComponent(token)}` : ""}`;
