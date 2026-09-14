@@ -28,6 +28,27 @@ try {
   // ใช้ค่าคงที่สำรอง — ก็ยังต่างจาก URL เดิมที่ไม่มีเวอร์ชันเลย จึงยังล้างแคชได้
 }
 
+/**
+ * เรียก API แบบมีเวลาหมดอายุ
+ *
+ * ทำไมต้องมี: หน้านี้คือหน้าแรกที่คนกดลิงก์คำท้าจะเห็น ถ้าปลายทางช้าหรือไม่ตอบ
+ * (เช่น ฐานข้อมูลเพิ่งตื่นจากโหมดพัก หรือเน็ตสะดุด) โค้ดเดิมจะรอไปเรื่อย ๆ
+ * จนชนเพดานเวลาของ Vercel แล้วขึ้นหน้า "504 GATEWAY_TIMEOUT" ให้คนเห็น
+ * ซึ่งแปลว่าลิงก์ที่เราแจกไปดูเหมือนพังทั้งที่ทุกอย่างปกติดี
+ *
+ * ยอมรอแค่ 4 วินาที เกินนั้นถือว่าไม่ได้ข้อมูล แล้วไปแสดงหน้าสำรองแทน
+ * (ดีกว่าปล่อยให้คนเจอหน้า error ของ Vercel ซึ่งกดต่อไม่ได้เลย)
+ */
+async function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function escapeHtml(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -51,15 +72,19 @@ module.exports = async function handler(req, res) {
 
   if (supabaseUrl && supabaseAnonKey && token) {
     try {
-      const r = await fetch(`${supabaseUrl}/rest/v1/rpc/get_invite_preview`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
+      const r = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/rpc/get_invite_preview`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({ p_token: token }),
         },
-        body: JSON.stringify({ p_token: token }),
-      });
+        4000
+      );
       if (r.ok) {
         const rows = await r.json();
         preview = Array.isArray(rows) ? rows[0] ?? null : null;
@@ -74,8 +99,29 @@ module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
 
+  // ดึงข้อมูลคำท้าไม่ได้ (ช้า/ล่ม) — แต่ token ยังอยู่ใน URL ครบ ปุ่มเข้าแอป
+  // จึงยังใช้ได้ตามปกติ ส่งหน้าที่กดต่อได้ไปให้ดีกว่าปล่อยให้เจอหน้า error
+  // (ไม่ให้ CDN แคชไว้ เพราะรอบหน้าอาจดึงข้อมูลได้แล้ว)
+  if (!preview && fetchError) {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).send(`<!doctype html>
+<html lang="th"><head><meta charset="utf-8" />
+<title>คำท้าจากเพื่อน — Challenge Me</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Challenge Me" />
+<meta property="og:title" content="🎯 มีคนท้าคุณ — Challenge Me" />
+<meta property="og:image" content="${escapeHtml(`${siteOrigin}/api/og-cover?v=${OG_IMAGE_VERSION}`)}" /></head>
+<body style="font-family:-apple-system,system-ui,sans-serif;text-align:center;padding:56px 24px;background:#fdf8f1;color:#222;">
+<h1 style="font-size:22px;">มีคนท้าคุณอยู่ 🎯</h1>
+<p style="color:#555;">เปิดแอปเพื่อดูรายละเอียดคำท้าได้เลย</p>
+<a href="${escapeHtml(appUrl)}" style="display:block;max-width:360px;margin:28px auto 0;background:#d61f3f;color:#fff;text-decoration:none;font-weight:700;padding:14px;border-radius:8px;">🎯 รับคำท้า — เปิด Challenge Me</a>
+</body></html>`);
+    return;
+  }
+
   if (!preview) {
-    res.status(fetchError ? 502 : 404).send(`<!doctype html>
+    res.status(404).send(`<!doctype html>
 <html lang="th"><head><meta charset="utf-8" />
 <title>ไม่พบคำท้านี้ — Challenge Me</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" /></head>

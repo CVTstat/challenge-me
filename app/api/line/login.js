@@ -28,10 +28,27 @@ function json(res, status, body) {
   res.status(status).send(JSON.stringify(body));
 }
 
+/**
+ * เรียก API แบบมีเวลาหมดอายุ
+ *
+ * ถ้าปลายทาง (LINE หรือ Supabase) ไม่ตอบ โค้ดจะรอไปเรื่อย ๆ จนชนเพดานเวลา
+ * ของ Vercel แล้วขึ้นหน้า 504 ให้ผู้ใช้เห็น ซึ่งดูเหมือนแอปพังทั้งระบบ
+ * ตัดจบที่ 6 วินาทีแล้วบอกว่า "ลองใหม่อีกครั้ง" เข้าใจง่ายกว่ามาก
+ */
+async function fetchWithTimeout(url, options, ms = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function supabaseAdmin(path, options = {}) {
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const response = await fetch(`${url}${path}`, {
+  const response = await fetchWithTimeout(`${url}${path}`, {
     ...options,
     headers: {
       apikey: key,
@@ -81,7 +98,7 @@ module.exports = async function handler(req, res) {
   // ── 1. ตรวจ ID token กับ LINE ──────────────────────────────────────────
   let lineProfile;
   try {
-    const verifyRes = await fetch(LINE_VERIFY_URL, {
+    const verifyRes = await fetchWithTimeout(LINE_VERIFY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ id_token: idToken, client_id: lineChannelId }).toString(),
